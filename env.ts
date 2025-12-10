@@ -28,7 +28,7 @@ const envSchema = z.object({
   HOST: z.string().default('localhost'),
 
   // Database
-  DATABASE_URL: z.string().startsWith('postgresql://'),
+  DATABASE_URL: z.string().startsWith('mysql://'),
   DATABASE_POOL_MIN: z.coerce.number().min(0).default(2),
   DATABASE_POOL_MAX: z.coerce.number().positive().default(10),
 
@@ -73,7 +73,7 @@ try {
     console.error(JSON.stringify(error.flatten().fieldErrors, null, 2))
 
     // More detailed error messages
-    error.errors.forEach((err) => {
+    error.issues.forEach((err) => {
       const path = err.path.join('.')
       console.error(`  ${path}: ${err.message}`)
     })

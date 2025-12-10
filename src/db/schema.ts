@@ -1,138 +1,343 @@
-import {
-  pgTable,
-  uuid,
-  varchar,
-  text,
-  timestamp,
-  boolean,
-  integer,
-} from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+import { DataTypes, Model, type InferAttributes, type InferCreationAttributes, type CreationOptional, type ForeignKey, type NonAttribute } from 'sequelize'
+import { sequelize } from './connection.ts'
+import { z } from 'zod'
 
-// Users table
-export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  email: varchar('email', { length: 255 }).notNull().unique(),
-  username: varchar('username', { length: 50 }).notNull().unique(),
-  password: varchar('password', { length: 255 }).notNull(),
-  firstName: varchar('first_name', { length: 50 }),
-  lastName: varchar('last_name', { length: 50 }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+// Users model
+export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
+  declare id: CreationOptional<string>
+  declare email: string
+  declare username: string
+  declare password: string
+  declare firstName: string | null
+  declare lastName: string | null
+  declare createdAt: CreationOptional<Date>
+  declare updatedAt: CreationOptional<Date>
+
+  declare habits?: NonAttribute<Habit[]>
+}
+
+User.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    email: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      unique: true,
+    },
+    username: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
+    },
+    password: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    firstName: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      field: 'first_name',
+    },
+    lastName: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      field: 'last_name',
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at',
+    },
+  },
+  {
+    sequelize,
+    tableName: 'users',
+    timestamps: true,
+    underscored: true,
+  }
+)
+
+// Habits model
+export class Habit extends Model<InferAttributes<Habit>, InferCreationAttributes<Habit>> {
+  declare id: CreationOptional<string>
+  declare userId: ForeignKey<User['id']>
+  declare name: string
+  declare description: string | null
+  declare frequency: string
+  declare targetCount: CreationOptional<number>
+  declare isActive: CreationOptional<boolean>
+  declare createdAt: CreationOptional<Date>
+  declare updatedAt: CreationOptional<Date>
+
+  declare user?: NonAttribute<User>
+  declare entries?: NonAttribute<Entry[]>
+  declare tags?: NonAttribute<Tag[]>
+}
+
+Habit.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      field: 'user_id',
+    },
+    name: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    frequency: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+    },
+    targetCount: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+      field: 'target_count',
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+      field: 'is_active',
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at',
+    },
+  },
+  {
+    sequelize,
+    tableName: 'habits',
+    timestamps: true,
+    underscored: true,
+  }
+)
+
+// Entries model
+export class Entry extends Model<InferAttributes<Entry>, InferCreationAttributes<Entry>> {
+  declare id: CreationOptional<string>
+  declare habitId: ForeignKey<Habit['id']>
+  declare completionDate: CreationOptional<Date>
+  declare note: string | null
+  declare createdAt: CreationOptional<Date>
+
+  declare habit?: NonAttribute<Habit>
+}
+
+Entry.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    habitId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      field: 'habit_id',
+    },
+    completionDate: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+      field: 'completion_date',
+    },
+    note: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+  },
+  {
+    sequelize,
+    tableName: 'entries',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: false,
+    underscored: true,
+  }
+)
+
+// Tags model
+export class Tag extends Model<InferAttributes<Tag>, InferCreationAttributes<Tag>> {
+  declare id: CreationOptional<string>
+  declare name: string
+  declare color: CreationOptional<string>
+  declare createdAt: CreationOptional<Date>
+  declare updatedAt: CreationOptional<Date>
+
+  declare habits?: NonAttribute<Habit[]>
+}
+
+Tag.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    name: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
+    },
+    color: {
+      type: DataTypes.STRING(7),
+      allowNull: false,
+      defaultValue: '#6B7280',
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'updated_at',
+    },
+  },
+  {
+    sequelize,
+    tableName: 'tags',
+    timestamps: true,
+    underscored: true,
+  }
+)
+
+// HabitTags (junction) model
+export class HabitTag extends Model<InferAttributes<HabitTag>, InferCreationAttributes<HabitTag>> {
+  declare id: CreationOptional<string>
+  declare habitId: ForeignKey<Habit['id']>
+  declare tagId: ForeignKey<Tag['id']>
+  declare createdAt: CreationOptional<Date>
+
+  declare habit?: NonAttribute<Habit>
+  declare tag?: NonAttribute<Tag>
+}
+
+HabitTag.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    habitId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      field: 'habit_id',
+    },
+    tagId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      field: 'tag_id',
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'created_at',
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  {
+    sequelize,
+    tableName: 'habit_tags',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: false,
+    underscored: true,
+  }
+)
+
+// Associations
+User.hasMany(Habit, {
+  foreignKey: 'userId',
+  as: 'habits',
+  onDelete: 'CASCADE',
+})
+Habit.belongsTo(User, { foreignKey: 'userId', as: 'user' })
+
+Habit.hasMany(Entry, {
+  foreignKey: 'habitId',
+  as: 'entries',
+  onDelete: 'CASCADE',
+})
+Entry.belongsTo(Habit, { foreignKey: 'habitId', as: 'habit' })
+
+Habit.belongsToMany(Tag, {
+  through: HabitTag,
+  foreignKey: 'habitId',
+  otherKey: 'tagId',
+  as: 'tags',
+})
+Tag.belongsToMany(Habit, {
+  through: HabitTag,
+  foreignKey: 'tagId',
+  otherKey: 'habitId',
+  as: 'habits',
 })
 
-// Habits table
-export const habits = pgTable('habits', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id')
-    .references(() => users.id, { onDelete: 'cascade' })
-    .notNull(),
-  name: varchar('name', { length: 100 }).notNull(),
-  description: text('description'),
-  frequency: varchar('frequency', { length: 20 }).notNull(), // daily, weekly, monthly
-  targetCount: integer('target_count').default(1), // how many times per frequency period
-  isActive: boolean('is_active').default(true).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+HabitTag.belongsTo(Habit, { foreignKey: 'habitId', as: 'habit' })
+HabitTag.belongsTo(Tag, { foreignKey: 'tagId', as: 'tag' })
+
+// Zod schemas (keep API validation similar to previous drizzle-zod usage)
+export const insertUserSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  username: z.string().min(3).max(50),
+  password: z.string().min(8),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
 })
 
-// Habit entries table
-export const entries = pgTable('entries', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  habitId: uuid('habit_id')
-    .references(() => habits.id, { onDelete: 'cascade' })
-    .notNull(),
-  completion_date: timestamp('completion_date').defaultNow().notNull(),
-  note: text('note'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-})
+// Type exports (compatible replacements)
+export type UserAttributes = InferAttributes<User>
+export type NewUserAttributes = InferCreationAttributes<User>
 
-// Tags table
-export const tags = pgTable('tags', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: varchar('name', { length: 50 }).notNull().unique(),
-  color: varchar('color', { length: 7 }).default('#6B7280'), // hex color
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-})
+export type HabitAttributes = InferAttributes<Habit>
+export type NewHabitAttributes = InferCreationAttributes<Habit>
 
-// Habit-Tags junction table (many-to-many)
-export const habitTags = pgTable('habit_tags', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  habitId: uuid('habit_id')
-    .references(() => habits.id, { onDelete: 'cascade' })
-    .notNull(),
-  tagId: uuid('tag_id')
-    .references(() => tags.id, { onDelete: 'cascade' })
-    .notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-})
+export type EntryAttributes = InferAttributes<Entry>
+export type NewEntryAttributes = InferCreationAttributes<Entry>
 
-// Relations
-export const usersRelations = relations(users, ({ many }) => ({
-  habits: many(habits),
-}))
+export type TagAttributes = InferAttributes<Tag>
+export type NewTagAttributes = InferCreationAttributes<Tag>
 
-export const habitsRelations = relations(habits, ({ one, many }) => ({
-  user: one(users, {
-    fields: [habits.userId],
-    references: [users.id],
-  }),
-  entries: many(entries),
-  habitTags: many(habitTags),
-}))
+export type HabitTagAttributes = InferAttributes<HabitTag>
+export type NewHabitTagAttributes = InferCreationAttributes<HabitTag>
 
-export const entriesRelations = relations(entries, ({ one }) => ({
-  habit: one(habits, {
-    fields: [entries.habitId],
-    references: [habits.id],
-  }),
-}))
-
-export const tagsRelations = relations(tags, ({ many }) => ({
-  habitTags: many(habitTags),
-}))
-
-export const habitTagsRelations = relations(habitTags, ({ one }) => ({
-  habit: one(habits, {
-    fields: [habitTags.habitId],
-    references: [habits.id],
-  }),
-  tag: one(tags, {
-    fields: [habitTags.tagId],
-    references: [tags.id],
-  }),
-}))
-
-// Zod schemas for validation (optional but recommended)
-export const insertUserSchema = createInsertSchema(users)
-export const selectUserSchema = createSelectSchema(users)
-
-export const insertHabitSchema = createInsertSchema(habits)
-export const selectHabitSchema = createSelectSchema(habits)
-
-export const insertEntrySchema = createInsertSchema(entries)
-export const selectEntrySchema = createSelectSchema(entries)
-
-export const insertTagSchema = createInsertSchema(tags)
-export const selectTagSchema = createSelectSchema(tags)
-
-export const insertHabitTagSchema = createInsertSchema(habitTags)
-export const selectHabitTagSchema = createSelectSchema(habitTags)
-
-// Type exports
-export type User = typeof users.$inferSelect
-export type NewUser = typeof users.$inferInsert
-
-export type Habit = typeof habits.$inferSelect
-export type NewHabit = typeof habits.$inferInsert
-
-export type Entry = typeof entries.$inferSelect
-export type NewEntry = typeof entries.$inferInsert
-
-export type Tag = typeof tags.$inferSelect
-export type NewTag = typeof tags.$inferInsert
-
-export type HabitTag = typeof habitTags.$inferSelect
-export type NewHabitTag = typeof habitTags.$inferInsert
+// For compatibility with previous named exports
+export const users = User
+export const habits = Habit
+export const entries = Entry
+export const tags = Tag
+export const habitTags = HabitTag

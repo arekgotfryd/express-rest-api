@@ -1,22 +1,23 @@
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
-import * as schema from './schema.ts'
+import { Sequelize } from 'sequelize'
 import { env, isProd } from '../../env.ts'
 import { remember } from '@epic-web/remember'
 
-const createPool = () => {
-  return new Pool({
-    connectionString: env.DATABASE_URL,
+const createSequelize = () => {
+  return new Sequelize(env.DATABASE_URL, {
+    dialect: 'mysql',
+    logging: false,
   })
 }
 
-let client
+let sequelize: Sequelize
 
 if (isProd()) {
-  client = createPool()
+  sequelize = createSequelize()
 } else {
-  client = remember('dbPool', () => createPool())
+  sequelize = remember('sequelize', () => createSequelize())
 }
 
-export const db = drizzle({ client, schema })
+const db = sequelize
+
+export { sequelize, db }
 export default db
