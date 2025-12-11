@@ -1,26 +1,23 @@
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.ts'
-import { db } from '../db/connection.ts'
-import { users } from '../db/schema.ts'
-import { eq } from 'drizzle-orm'
+import { users as User } from '../db/schema.ts'
 import bcrypt from 'bcrypt'
 
 export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id
 
-    const [user] = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        username: users.username,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        createdAt: users.createdAt,
-        updatedAt: users.updatedAt,
-      })
-      .from(users)
-      .where(eq(users.id, userId))
+    const user = await User.findByPk(userId, {
+      attributes: [
+        'id',
+        'email',
+        'username',
+        'firstName',
+        'lastName',
+        'createdAt',
+        'updatedAt',
+      ],
+    })
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
@@ -41,24 +38,29 @@ export const updateProfile = async (
     const userId = req.user!.id
     const { email, username, firstName, lastName } = req.body
 
-    const [updatedUser] = await db
-      .update(users)
-      .set({
-        email,
-        username,
-        firstName,
-        lastName,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId))
-      .returning({
-        id: users.id,
-        email: users.email,
-        username: users.username,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        updatedAt: users.updatedAt,
-      })
+    const user = await User.findByPk(userId)
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    await user.update({
+      email,
+      username,
+      firstName,
+      lastName,
+      updatedAt: new Date(),
+    })
+
+    const updatedUser = await User.findByPk(userId, {
+      attributes: [
+        'id',
+        'email',
+        'username',
+        'firstName',
+        'lastName',
+        'updatedAt',
+      ],
+    })
 
     res.json({
       message: 'Profile updated successfully',
@@ -78,32 +80,23 @@ export const changePassword = async (
     const userId = req.user!.id
     const { currentPassword, newPassword } = req.body
 
-    // Get current user with password
-    const [user] = await db.select().from(users).where(eq(users.id, userId))
-
+    const user = await User.findByPk(userId)
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    // Verify current password
     const isValidPassword = await bcrypt.compare(currentPassword, user.password)
-
     if (!isValidPassword) {
       return res.status(400).json({ error: 'Current password is incorrect' })
     }
 
-    // Hash new password
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12')
     const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds)
 
-    // Update password
-    await db
-      .update(users)
-      .set({
-        password: hashedNewPassword,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId))
+    await user.update({
+      password: hashedNewPassword,
+      updatedAt: new Date(),
+    })
 
     res.json({
       message: 'Password changed successfully',

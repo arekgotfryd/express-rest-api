@@ -1,318 +1,127 @@
-import { db } from './connection.ts'
-import { users, habits, entries, tags, habitTags } from './schema.ts'
+import { sequelize } from './connection.ts'
+import { users as User, organizations as Organization, orders as Order } from './schema.ts'
 import { hashPassword } from '../utils/password.ts'
 
 async function seed() {
   console.log('🌱 Starting database seed...')
 
   try {
-    // Clear existing data
+    // Optionally sync models (uncomment if you want Sequelize to manage tables)
+    await sequelize.sync({ alter: false })
+
+    // Clear existing data (respect FK order)
     console.log('Clearing existing data...')
-    await db.delete(entries)
-    await db.delete(habitTags)
-    await db.delete(habits)
-    await db.delete(tags)
-    await db.delete(users)
+    await Organization.destroy({ where: {} })
+    await Order.destroy({ where: {} })
+    await User.destroy({ where: {} })
 
-    // Create demo users
-    console.log('Creating demo users...')
-    const hashedPassword = await hashPassword('demo123')
+    //Create organizations
+    console.log('Creating organizations...')
+    const corpA = await Organization.create({ name: 'Corp A', industry: 'Finance', dateFounded: new Date('2000-01-01') })
+    const corpB = await Organization.create({ name: 'Corp B', industry: 'Technology', dateFounded: new Date('2010-01-01') })
 
-    const [demoUser] = await db
-      .insert(users)
-      .values({
-        email: 'demo@habittracker.com',
-        username: 'demouser',
-        password: hashedPassword,
-        firstName: 'Demo',
-        lastName: 'User',
+    // Create demo users Corp A
+    console.log('Creating demo users corp A...')
+    const usersCorpA = await Promise.all(
+      Array.from({ length: 5 }, (_, i) => i + 1).map(async (n) => {
+        const hashedPassword = await hashPassword('demo123')
+        return User.create({
+          email: `user${n}@corpa.com`,
+          password: hashedPassword,
+          firstName: 'User',
+          lastName: ['One', 'Two', 'Three', 'Four', 'Five'][n - 1],
+          organizationId: corpA.id,
+        })
       })
-      .returning()
+    )
 
-    const [johnDoe] = await db
-      .insert(users)
-      .values({
-        email: 'john@example.com',
-        username: 'johndoe',
-        password: hashedPassword,
-        firstName: 'John',
-        lastName: 'Doe',
+    console.log('Creating demo users corp B...')
+    const usersCorpB = await Promise.all(
+      Array.from({ length: 5 }, (_, i) => i + 6).map(async (n) => {
+        const hashedPassword = await hashPassword('demo123')
+        return User.create({
+          email: `user${n}@corpb.com`,
+          password: hashedPassword,
+          firstName: 'User',
+          lastName: ['Six', 'Seven', 'Eight', 'Nine', 'Ten'][n - 6],
+          organizationId: corpB.id,
+        })
       })
-      .returning()
-
-    // Create tags
-    console.log('Creating tags...')
-
-    const [healthTag] = await db
-      .insert(tags)
-      .values({
-        name: 'Health',
-        color: '#10B981',
-      })
-      .returning()
-
-    const [productivityTag] = await db
-      .insert(tags)
-      .values({
-        name: 'Productivity',
-        color: '#3B82F6',
-      })
-      .returning()
-
-    const [mindfulnessTag] = await db
-      .insert(tags)
-      .values({
-        name: 'Mindfulness',
-        color: '#8B5CF6',
-      })
-      .returning()
-
-    const [fitnessTag] = await db
-      .insert(tags)
-      .values({
-        name: 'Fitness',
-        color: '#EF4444',
-      })
-      .returning()
-
-    const [learningTag] = await db
-      .insert(tags)
-      .values({
-        name: 'Learning',
-        color: '#F59E0B',
-      })
-      .returning()
-
-    const [personalTag] = await db
-      .insert(tags)
-      .values({
-        name: 'Personal',
-        color: '#EC4899',
-      })
-      .returning()
-
-    // Create habits for demo user
-    console.log('Creating demo habits...')
-
-    const [exerciseHabit] = await db
-      .insert(habits)
-      .values({
-        userId: demoUser.id,
-        name: 'Exercise',
-        description: 'Daily workout routine',
-        frequency: 'daily',
-        targetCount: 1,
-      })
-      .returning()
-
-    // Add tags to exercise habit
-    await db.insert(habitTags).values([
-      { habitId: exerciseHabit.id, tagId: healthTag.id },
-      { habitId: exerciseHabit.id, tagId: fitnessTag.id },
-    ])
-
-    const [readingHabit] = await db
-      .insert(habits)
-      .values({
-        userId: demoUser.id,
-        name: 'Read for 30 minutes',
-        description: 'Read books or articles',
-        frequency: 'daily',
-        targetCount: 1,
-      })
-      .returning()
-
-    // Add tags to reading habit
-    await db.insert(habitTags).values([
-      { habitId: readingHabit.id, tagId: learningTag.id },
-      { habitId: readingHabit.id, tagId: personalTag.id },
-    ])
-
-    const [meditationHabit] = await db
-      .insert(habits)
-      .values({
-        userId: demoUser.id,
-        name: 'Meditate',
-        description: '10 minutes of mindfulness',
-        frequency: 'daily',
-        targetCount: 1,
-      })
-      .returning()
-
-    // Add tags to meditation habit
-    await db.insert(habitTags).values([
-      { habitId: meditationHabit.id, tagId: mindfulnessTag.id },
-      { habitId: meditationHabit.id, tagId: healthTag.id },
-    ])
-
-    const [waterHabit] = await db
-      .insert(habits)
-      .values({
-        userId: demoUser.id,
-        name: 'Drink 8 glasses of water',
-        description: 'Stay hydrated throughout the day',
-        frequency: 'daily',
-        targetCount: 8,
-      })
-      .returning()
-
-    // Add tag to water habit
-    await db
-      .insert(habitTags)
-      .values([{ habitId: waterHabit.id, tagId: healthTag.id }])
-
-    // Create habits for John
-    const [codingHabit] = await db
-      .insert(habits)
-      .values({
-        userId: johnDoe.id,
-        name: 'Code for 1 hour',
-        description: 'Practice programming skills',
-        frequency: 'daily',
-        targetCount: 1,
-      })
-      .returning()
-
-    // Add tags to coding habit
-    await db.insert(habitTags).values([
-      { habitId: codingHabit.id, tagId: learningTag.id },
-      { habitId: codingHabit.id, tagId: productivityTag.id },
-    ])
-
-    // Add completion entries for demo user
-    console.log('Adding completion entries...')
-
-    const today = new Date()
-    today.setHours(12, 0, 0, 0)
-
-    // Exercise habit - completions for past 7 days
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today)
-      date.setDate(date.getDate() - i)
-      await db.insert(entries).values({
-        habitId: exerciseHabit.id,
-        completion_date: date,
-        note: i === 0 ? 'Great workout today!' : null,
-      })
+    )
+    const orderCountPerUser = 2
+    // Create orders for users in Corp A
+    console.log('Creating orders for Corp A users...')
+    for (const user of usersCorpA) {
+      for (let i = 0; i < orderCountPerUser; i++) {
+        await Order.create({
+          userId: user.id,
+          totalAmount: Math.floor(Math.random() * 100) + 1,
+          organizationId: corpA.id,
+        })
+      }
     }
 
-    // Reading habit - completions for past 3 days
-    for (let i = 1; i <= 3; i++) {
-      const date = new Date(today)
-      date.setDate(date.getDate() - i)
-      await db.insert(entries).values({
-        habitId: readingHabit.id,
-        completion_date: date,
-      })
-    }
-
-    // Meditation habit - Sporadic completions
-    const meditationDays = [0, 2, 3, 5, 8, 9, 10, 15]
-    for (const daysAgo of meditationDays) {
-      const date = new Date(today)
-      date.setDate(date.getDate() - daysAgo)
-      await db.insert(entries).values({
-        habitId: meditationHabit.id,
-        completion_date: date,
-      })
-    }
-
-    // Water habit - Completed today with multiple entries (for target count demo)
-    for (let i = 0; i < 6; i++) {
-      const date = new Date(today)
-      date.setHours(8 + i * 2, 0, 0, 0) // Different times throughout the day
-      await db.insert(entries).values({
-        habitId: waterHabit.id,
-        completion_date: date,
-        note: `Glass ${i + 1} of water`,
-      })
-    }
-
-    // Coding habit for John - completions from 3 to 17 days ago
-    for (let i = 3; i < 17; i++) {
-      const date = new Date(today)
-      date.setDate(date.getDate() - i)
-      await db.insert(entries).values({
-        habitId: codingHabit.id,
-        completion_date: date,
-      })
+    // Create orders for users in Corp B
+    console.log('Creating orders for Corp B users...')
+    for (const user of usersCorpB) {
+      for (let i = 0; i < orderCountPerUser; i++) {
+        await Order.create({
+          userId: user.id,
+          totalAmount: Math.floor(Math.random() * 100) + 1,
+          organizationId: corpB.id,
+        })
+      }
     }
 
     // Demonstrate using relations to query data
     console.log('\n🔍 Testing relational queries...')
 
-    // Query user with all their habits, entries, and tags
-    const userWithHabits = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.email, 'demo@habittracker.com'),
-      with: {
-        habits: {
-          with: {
-            entries: true,
-            habitTags: {
-              with: {
-                tag: true,
-              },
+    // Query user with all their orders
+    const userWithOrders = await User.findOne({
+      where: { email: 'user1@corpa.com' },
+      include: [
+        {
+          model: Order,
+          as: 'orders',
+        },
+      ],
+    })
+
+
+    // Query all organizations with their users and orders
+    const orgsWithUsersAndOrders = await Organization.findAll({
+      include: [
+        {
+          model: User,
+          as: 'users',
+          include: [
+            {
+              model: Order,
+              as: 'orders',
             },
-          },
+          ],
         },
-      },
+        {
+          model: Order,
+          as: 'orders',
+        },
+      ],
     })
 
-    // Query habits with their tags
-    const habitsWithTags = await db.query.habits.findMany({
-      limit: 3,
-      with: {
-        user: {
-          columns: {
-            password: false, // Exclude password from results
-          },
-        },
-        habitTags: {
-          with: {
-            tag: true,
-          },
-        },
-        entries: {
-          limit: 5,
-          orderBy: (entries, { desc }) => [desc(entries.completion_date)],
-        },
-      },
-    })
 
-    // Query tags with their habits
-    const tagsWithHabits = await db.query.tags.findMany({
-      with: {
-        habitTags: {
-          with: {
-            habit: {
-              columns: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-    })
-
+    // Sanity check
     console.log('✅ Database seeded successfully!')
     console.log('\n📊 Seed Summary:')
-    console.log('- 2 demo users created')
-    console.log('- 6 tags created')
-    console.log('- 5 habits created with tags')
-    console.log('- Multiple completion entries added')
-    console.log(`- Demo user has ${userWithHabits?.habits.length || 0} habits`)
-    console.log(
-      `- Total entries for demo user: ${
-        userWithHabits?.habits.reduce((acc, h) => acc + h.entries.length, 0) ||
-        0
-      }`
-    )
-    console.log(`- Total tags in system: ${tagsWithHabits?.length || 0}`)
+    console.log('- 2  demo orgs created')
+    console.log('- 10 demo users created')
+    console.log('- 20 demo orders created')
+    console.log(`- Demo user has ${userWithOrders?.orders?.length || 0} orders`)
+    console.log(`- Total organizations in system: ${orgsWithUsersAndOrders?.length || 0}`)
+    console.log(`- Total orders in system: ${orgsWithUsersAndOrders.reduce((acc, org) => acc + (org.orders?.length || 0), 0)}`)
     console.log('\n🔑 Login Credentials:')
-    console.log('Email: demo@habittracker.com')
+    console.log('email: user1@corpa.com')
     console.log('Password: demo123')
-    console.log('\nEmail: john@example.com')
+    console.log('\nEmail: user1@corpb.com')
     console.log('Password: demo123')
   } catch (error) {
     console.error('❌ Seed failed:', error)

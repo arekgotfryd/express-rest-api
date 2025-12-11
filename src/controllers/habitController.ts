@@ -1,35 +1,31 @@
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.ts'
-import { db } from '../db/connection.ts'
-import { habits, entries, habitTags, tags } from '../db/schema.ts'
-import { eq, and, desc, inArray } from 'drizzle-orm'
+import { sequelize } from '../db/connection.ts'
+import { habits as Habit, entries as Entry, habitTags as HabitTag, tags as Tag, users as User } from '../db/schema.ts'
 
 export const createHabit = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { name, description, frequency, targetCount, tagIds } = req.body
     const userId = req.user!.id
 
-    // Start a transaction
-    const result = await db.transaction(async (tx) => {
-      // Create the habit
-      const [newHabit] = await tx
-        .insert(habits)
-        .values({
+    const result = await sequelize.transaction(async (tx) => {
+      const newHabit = await Habit.create(
+        {
           userId,
           name,
           description,
           frequency,
           targetCount,
-        })
-        .returning()
+        },
+        { transaction: tx }
+      )
 
-      // If tags are provided, create the associations
       if (tagIds && tagIds.length > 0) {
         const habitTagValues = tagIds.map((tagId: string) => ({
           habitId: newHabit.id,
           tagId,
         }))
-        await tx.insert(habitTags).values(habitTagValues)
+        await HabitTag.bulkCreate(habitTagValues, { transaction: tx })
       }
 
       return newHabit
@@ -52,29 +48,25 @@ export const getUserHabits = async (
   try {
     const userId = req.user!.id
 
-    // Query habits with their tags
-    const userHabitsWithTags = await db.query.habits.findMany({
-      where: eq(habits.userId, userId),
-      with: {
-        habitTags: {
-          with: {
-            tag: true,
-          },
+    const userHabitsWithTags = await Habit.findAll({
+      where: { userId },
+      include: [
+        {
+          model: HabitTag,
+          as: 'habitTags',
+          include: [{ model: Tag, as: 'tag' }],
         },
-      },
-      orderBy: [desc(habits.createdAt)],
+      ],
+      order: [['created_at', 'DESC']],
     })
 
-    // Transform the data to include tags directly
-    const habitsWithTags = userHabitsWithTags.map((habit) => ({
-      ...habit,
-      tags: habit.habitTags.map((ht) => ht.tag),
-      habitTags: undefined, // Remove the intermediate relation
+    const habitsWithTags = userHabitsWithTags.map((habit: any) => ({
+      ...habit.get({ plain: true }),
+      tags: habit.habitTags.map((ht: any) => ht.tag),
+      habitTags: undefined,
     }))
 
-    res.json({
-      habits: habitsWithTags,
-    })
+    res.json({ habits: habitsWithTags })
   } catch (error) {
     console.error('Get habits error:', error)
     res.status(500).json({ error: 'Failed to fetch habits' })
@@ -89,35 +81,30 @@ export const getHabitById = async (
     const { id } = req.params
     const userId = req.user!.id
 
-    const habit = await db.query.habits.findFirst({
-      where: and(eq(habits.id, id), eq(habits.userId, userId)),
-      with: {
-        habitTags: {
-          with: {
-            tag: true,
-          },
+    const habit = await Habit.findOne({
+      where: { id, userId },
+      include: [
+        {
+          model: HabitTag,
+          as: 'habitTags',
+          include: [{ model: Tag, as: 'tag' }],
         },
-        entries: {
-          orderBy: [desc(entries.completion_date)],
-          limit: 10,
-        },
-      },
+        { model: Entry, as: 'entries', limit: 10, order: [['completion_date', 'DESC']] },
+      ],
     })
 
     if (!habit) {
       return res.status(404).json({ error: 'Habit not found' })
     }
 
-    // Transform the data
+    const plain = habit.get({ plain: true }) as any
     const habitWithTags = {
-      ...habit,
-      tags: habit.habitTags.map((ht) => ht.tag),
+      ...plain,
+      tags: plain.habitTags.map((ht: any) => ht.tag),
       habitTags: undefined,
     }
 
-    res.json({
-      habit: habitWithTags,
-    })
+    res.json({ habit: habitWithTags })
   } catch (error) {
     console.error('Get habit error:', error)
     res.status(500).json({ error: 'Failed to fetch habit' })
@@ -130,40 +117,24 @@ export const updateHabit = async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user!.id
     const { tagIds, ...updates } = req.body
 
-    const result = await db.transaction(async (tx) => {
-      // Update the habit
-      const [updatedHabit] = await tx
-        .update(habits)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(and(eq(habits.id, id), eq(habits.userId, userId)))
-        .returning()
+    const result = await sequelize.transaction(async (tx) => {
+      const habit = await Habit.findOne({ where: { id, userId }, transaction: tx })
+      if (!habit) throw new Error('Habit not found')
 
-      if (!updatedHabit) {
-        throw new Error('Habit not found')
-      }
+      await habit.update({ ...updates, updatedAt: new Date() }, { transaction: tx })
 
-      // If tagIds are provided, update the associations
       if (tagIds !== undefined) {
-        // Remove existing tags
-        await tx.delete(habitTags).where(eq(habitTags.habitId, id))
-
-        // Add new tags
+        await HabitTag.destroy({ where: { habitId: id }, transaction: tx })
         if (tagIds.length > 0) {
-          const habitTagValues = tagIds.map((tagId: string) => ({
-            habitId: id,
-            tagId,
-          }))
-          await tx.insert(habitTags).values(habitTagValues)
+          const habitTagValues = tagIds.map((tagId: string) => ({ habitId: id, tagId }))
+          await HabitTag.bulkCreate(habitTagValues, { transaction: tx })
         }
       }
 
-      return updatedHabit
+      return habit
     })
 
-    res.json({
-      message: 'Habit updated successfully',
-      habit: result,
-    })
+    res.json({ message: 'Habit updated successfully', habit: result })
   } catch (error: any) {
     if (error.message === 'Habit not found') {
       return res.status(404).json({ error: 'Habit not found' })
@@ -178,18 +149,14 @@ export const deleteHabit = async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params
     const userId = req.user!.id
 
-    const [deletedHabit] = await db
-      .delete(habits)
-      .where(and(eq(habits.id, id), eq(habits.userId, userId)))
-      .returning()
-
-    if (!deletedHabit) {
+    const habit = await Habit.findOne({ where: { id, userId } })
+    if (!habit) {
       return res.status(404).json({ error: 'Habit not found' })
     }
 
-    res.json({
-      message: 'Habit deleted successfully',
-    })
+    await habit.destroy()
+
+    res.json({ message: 'Habit deleted successfully' })
   } catch (error) {
     console.error('Delete habit error:', error)
     res.status(500).json({ error: 'Failed to delete habit' })
@@ -205,29 +172,18 @@ export const logHabitCompletion = async (
     const { note } = req.body
     const userId = req.user!.id
 
-    // Verify habit belongs to user
-    const [habit] = await db
-      .select()
-      .from(habits)
-      .where(and(eq(habits.id, habitId), eq(habits.userId, userId)))
-
+    const habit = await Habit.findOne({ where: { id: habitId, userId } })
     if (!habit) {
       return res.status(404).json({ error: 'Habit not found' })
     }
 
-    const [newLog] = await db
-      .insert(entries)
-      .values({
-        habitId,
-        completion_date: new Date(),
-        note,
-      })
-      .returning()
-
-    res.status(201).json({
-      message: 'Habit completion logged',
-      log: newLog,
+    const newLog = await Entry.create({
+      habitId,
+      completionDate: new Date(),
+      note,
     })
+
+    res.status(201).json({ message: 'Habit completion logged', log: newLog })
   } catch (error) {
     console.error('Log habit completion error:', error)
     res.status(500).json({ error: 'Failed to log habit completion' })
@@ -243,37 +199,22 @@ export const completeHabit = async (
     const userId = req.user!.id
     const { note } = req.body
 
-    // Verify habit belongs to user
-    const [habit] = await db
-      .select()
-      .from(habits)
-      .where(and(eq(habits.id, id), eq(habits.userId, userId)))
-
+    const habit = await Habit.findOne({ where: { id, userId } })
     if (!habit) {
       return res.status(404).json({ error: 'Habit not found' })
     }
 
-    // Check if habit is active
     if (!habit.isActive) {
-      return res
-        .status(400)
-        .json({ error: 'Cannot complete an inactive habit' })
+      return res.status(400).json({ error: 'Cannot complete an inactive habit' })
     }
 
-    // Create new completion entry
-    const [newEntry] = await db
-      .insert(entries)
-      .values({
-        habitId: id,
-        completion_date: new Date(),
-        note,
-      })
-      .returning()
-
-    res.status(201).json({
-      message: 'Habit completed successfully',
-      entry: newEntry,
+    const newEntry = await Entry.create({
+      habitId: id,
+      completionDate: new Date(),
+      note,
     })
+
+    res.status(201).json({ message: 'Habit completed successfully', entry: newEntry })
   } catch (error) {
     console.error('Complete habit error:', error)
     res.status(500).json({ error: 'Failed to complete habit' })
@@ -288,34 +229,32 @@ export const getHabitsByTag = async (
     const { tagId } = req.params
     const userId = req.user!.id
 
-    // Get all habits that have this tag and belong to the user
-    const habitsWithTag = await db.query.habitTags.findMany({
-      where: eq(habitTags.tagId, tagId),
-      with: {
-        habit: {
-          with: {
-            habitTags: {
-              with: {
-                tag: true,
-              },
+    const habitsWithTag = await HabitTag.findAll({
+      where: { tagId },
+      include: [
+        {
+          model: Habit,
+          as: 'habit',
+          include: [
+            {
+              model: HabitTag,
+              as: 'habitTags',
+              include: [{ model: Tag, as: 'tag' }],
             },
-          },
+          ],
         },
-      },
+      ],
     })
 
-    // Filter habits by user and transform the data
     const userHabits = habitsWithTag
-      .filter((ht) => ht.habit.userId === userId)
-      .map((ht) => ({
-        ...ht.habit,
-        tags: ht.habit.habitTags.map((habitTag) => habitTag.tag),
+      .filter((ht: any) => ht.habit.userId === userId)
+      .map((ht: any) => ({
+        ...ht.habit.get({ plain: true }),
+        tags: ht.habit.habitTags.map((habitTag: any) => habitTag.tag),
         habitTags: undefined,
       }))
 
-    res.json({
-      habits: userHabits,
-    })
+    res.json({ habits: userHabits })
   } catch (error) {
     console.error('Get habits by tag error:', error)
     res.status(500).json({ error: 'Failed to fetch habits by tag' })
@@ -331,38 +270,21 @@ export const addTagsToHabit = async (
     const { tagIds } = req.body
     const userId = req.user!.id
 
-    // Verify habit belongs to user
-    const [habit] = await db
-      .select()
-      .from(habits)
-      .where(and(eq(habits.id, id), eq(habits.userId, userId)))
-
+    const habit = await Habit.findOne({ where: { id, userId } })
     if (!habit) {
       return res.status(404).json({ error: 'Habit not found' })
     }
 
-    // Get existing tags for this habit
-    const existingTags = await db
-      .select()
-      .from(habitTags)
-      .where(eq(habitTags.habitId, id))
-
+    const existingTags = await HabitTag.findAll({ where: { habitId: id } })
     const existingTagIds = existingTags.map((ht) => ht.tagId)
-    const newTagIds = tagIds.filter(
-      (tagId: string) => !existingTagIds.includes(tagId)
-    )
+    const newTagIds = tagIds.filter((tagId: string) => !existingTagIds.includes(tagId))
 
     if (newTagIds.length > 0) {
-      const habitTagValues = newTagIds.map((tagId: string) => ({
-        habitId: id,
-        tagId,
-      }))
-      await db.insert(habitTags).values(habitTagValues)
+      const habitTagValues = newTagIds.map((tagId: string) => ({ habitId: id, tagId }))
+      await HabitTag.bulkCreate(habitTagValues)
     }
 
-    res.json({
-      message: 'Tags added successfully',
-    })
+    res.json({ message: 'Tags added successfully' })
   } catch (error) {
     console.error('Add tags to habit error:', error)
     res.status(500).json({ error: 'Failed to add tags to habit' })
@@ -377,24 +299,14 @@ export const removeTagFromHabit = async (
     const { id, tagId } = req.params
     const userId = req.user!.id
 
-    // Verify habit belongs to user
-    const [habit] = await db
-      .select()
-      .from(habits)
-      .where(and(eq(habits.id, id), eq(habits.userId, userId)))
-
+    const habit = await Habit.findOne({ where: { id, userId } })
     if (!habit) {
       return res.status(404).json({ error: 'Habit not found' })
     }
 
-    // Remove the tag association
-    await db
-      .delete(habitTags)
-      .where(and(eq(habitTags.habitId, id), eq(habitTags.tagId, tagId)))
+    await HabitTag.destroy({ where: { habitId: id, tagId } })
 
-    res.json({
-      message: 'Tag removed successfully',
-    })
+    res.json({ message: 'Tag removed successfully' })
   } catch (error) {
     console.error('Remove tag from habit error:', error)
     res.status(500).json({ error: 'Failed to remove tag from habit' })

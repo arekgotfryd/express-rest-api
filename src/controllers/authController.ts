@@ -1,9 +1,7 @@
 import type { Request, Response } from 'express'
 import bcrypt from 'bcrypt'
 import { generateToken } from '../utils/jwt.ts'
-import { db } from '../db/connection.ts'
-import { users } from '../db/schema.ts'
-import { eq } from 'drizzle-orm'
+import { users as User } from '../db/schema.ts'
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -13,24 +11,23 @@ export const register = async (req: Request, res: Response) => {
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12')
     const hashedPassword = await bcrypt.hash(password, saltRounds)
 
-    // Create user
-    const [newUser] = await db
-      .insert(users)
-      .values({
-        email,
-        username,
-        password: hashedPassword,
-        firstName,
-        lastName,
-      })
-      .returning({
-        id: users.id,
-        email: users.email,
-        username: users.username,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        createdAt: users.createdAt,
-      })
+    // Create user via Sequelize
+    const created = await User.create({
+      email,
+      username,
+      password: hashedPassword,
+      firstName,
+      lastName,
+    })
+
+    const newUser = {
+      id: created.id,
+      email: created.email,
+      username: created.username,
+      firstName: created.firstName ?? undefined,
+      lastName: created.lastName ?? undefined,
+      createdAt: created.createdAt,
+    }
 
     // Generate JWT
     const token = await generateToken({
@@ -54,8 +51,8 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body
 
-    // Find user
-    const [user] = await db.select().from(users).where(eq(users.email, email))
+    // Find user by email
+    const user = await User.findOne({ where: { email } })
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' })
@@ -81,8 +78,8 @@ export const login = async (req: Request, res: Response) => {
         id: user.id,
         email: user.email,
         username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        firstName: user.firstName ?? undefined,
+        lastName: user.lastName ?? undefined,
       },
       token,
     })

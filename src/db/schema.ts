@@ -1,138 +1,183 @@
-import {
-  pgTable,
-  uuid,
-  varchar,
-  text,
-  timestamp,
-  boolean,
-  integer,
-} from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+import { DataTypes, Model, type InferAttributes, type InferCreationAttributes, type CreationOptional, type ForeignKey, type NonAttribute } from 'sequelize'
+import { sequelize } from './connection.ts'
+import { z } from 'zod'
 
-// Users table
-export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  email: varchar('email', { length: 255 }).notNull().unique(),
-  username: varchar('username', { length: 50 }).notNull().unique(),
-  password: varchar('password', { length: 255 }).notNull(),
-  firstName: varchar('first_name', { length: 50 }),
-  lastName: varchar('last_name', { length: 50 }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+// User model
+export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
+  declare id: CreationOptional<string>
+  declare email: string
+  declare password: string
+  declare firstName: string | null
+  declare lastName: string | null
+  declare organizationId: ForeignKey<Organization['id']>
+  declare orders: NonAttribute<Order[]>
+}
+
+User.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    email: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      unique: true,
+    },
+    password: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    firstName: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      field: 'first_name',
+    },
+    lastName: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      field: 'last_name',
+    },
+    organizationId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      field: 'organization_id',
+    },
+  },
+  {
+    sequelize,
+    tableName: 'users',
+    timestamps: true,
+    underscored: true,
+    createdAt: 'date_created',
+    updatedAt: false,
+  }
+)
+
+// Organization model
+export class Organization extends Model<InferAttributes<Organization>, InferCreationAttributes<Organization>> {
+  declare id: CreationOptional<string>
+  declare name: string
+  declare industry: string
+  declare dateFounded: Date
+  declare orders: NonAttribute<Order[]>
+}
+
+Organization.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    name: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+    industry: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+    dateFounded: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'date_founded',
+    },
+  },
+  {
+    sequelize,
+    tableName: 'organizations',
+    timestamps: true,
+    createdAt: false,
+    updatedAt: false,
+    underscored: true,
+  }
+)
+
+// Order model
+export class Order extends Model<InferAttributes<Order>, InferCreationAttributes<Order>> {
+  declare id: CreationOptional<string>
+  declare totalAmount: number
+  declare userId: ForeignKey<User['id']>
+  declare organizationId: ForeignKey<Organization['id']>
+}
+
+Order.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    totalAmount: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'total_amount',
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      field: 'user_id',
+    },
+    organizationId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      field: 'organization_id',
+    },
+  },
+  {
+    sequelize,
+    tableName: 'orders',
+    timestamps: true,
+    createdAt: 'order_date',
+    updatedAt: false,
+    underscored: true,
+  }
+)
+
+// Associations
+Organization.hasMany(User, {
+  foreignKey: 'organizationId',
+  as: 'users',
+  onDelete: 'CASCADE',
+})
+User.belongsTo(Organization, { foreignKey: 'organizationId', as: 'user' })
+
+User.hasMany(Order, {
+  foreignKey: 'userId',
+  as: 'orders',
+  onDelete: 'CASCADE',
+})
+Order.belongsTo(User, { foreignKey: 'userId', as: 'user' })
+
+Organization.hasMany(Order, {
+  foreignKey: 'organizationId',
+  as: 'orders',
+  onDelete: 'CASCADE'
+})
+Order.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organization' })
+
+// Zod schemas (keep API validation similar to previous drizzle-zod usage)
+export const insertUserSchema = z.object({
+  email: z.email('Invalid email format'),
+  password: z.string().min(8),
+  firstName: z.string().max(50).optional(),
+  lastName: z.string().max(50).optional(),
+  organizationName: z.string().max(100)
 })
 
-// Habits table
-export const habits = pgTable('habits', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id')
-    .references(() => users.id, { onDelete: 'cascade' })
-    .notNull(),
-  name: varchar('name', { length: 100 }).notNull(),
-  description: text('description'),
-  frequency: varchar('frequency', { length: 20 }).notNull(), // daily, weekly, monthly
-  targetCount: integer('target_count').default(1), // how many times per frequency period
-  isActive: boolean('is_active').default(true).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-})
+// Type exports (compatible replacements)
+export type UserAttributes = InferAttributes<User>
+export type NewUserAttributes = InferCreationAttributes<User>
 
-// Habit entries table
-export const entries = pgTable('entries', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  habitId: uuid('habit_id')
-    .references(() => habits.id, { onDelete: 'cascade' })
-    .notNull(),
-  completion_date: timestamp('completion_date').defaultNow().notNull(),
-  note: text('note'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-})
+export type OrganizationAttributes = InferAttributes<Organization>
+export type NewOrganizationAttributes = InferCreationAttributes<Organization>
 
-// Tags table
-export const tags = pgTable('tags', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: varchar('name', { length: 50 }).notNull().unique(),
-  color: varchar('color', { length: 7 }).default('#6B7280'), // hex color
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-})
+export type OrderAttributes = InferAttributes<Order>
+export type NewOrderAttributes = InferCreationAttributes<Order>
 
-// Habit-Tags junction table (many-to-many)
-export const habitTags = pgTable('habit_tags', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  habitId: uuid('habit_id')
-    .references(() => habits.id, { onDelete: 'cascade' })
-    .notNull(),
-  tagId: uuid('tag_id')
-    .references(() => tags.id, { onDelete: 'cascade' })
-    .notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-})
-
-// Relations
-export const usersRelations = relations(users, ({ many }) => ({
-  habits: many(habits),
-}))
-
-export const habitsRelations = relations(habits, ({ one, many }) => ({
-  user: one(users, {
-    fields: [habits.userId],
-    references: [users.id],
-  }),
-  entries: many(entries),
-  habitTags: many(habitTags),
-}))
-
-export const entriesRelations = relations(entries, ({ one }) => ({
-  habit: one(habits, {
-    fields: [entries.habitId],
-    references: [habits.id],
-  }),
-}))
-
-export const tagsRelations = relations(tags, ({ many }) => ({
-  habitTags: many(habitTags),
-}))
-
-export const habitTagsRelations = relations(habitTags, ({ one }) => ({
-  habit: one(habits, {
-    fields: [habitTags.habitId],
-    references: [habits.id],
-  }),
-  tag: one(tags, {
-    fields: [habitTags.tagId],
-    references: [tags.id],
-  }),
-}))
-
-// Zod schemas for validation (optional but recommended)
-export const insertUserSchema = createInsertSchema(users)
-export const selectUserSchema = createSelectSchema(users)
-
-export const insertHabitSchema = createInsertSchema(habits)
-export const selectHabitSchema = createSelectSchema(habits)
-
-export const insertEntrySchema = createInsertSchema(entries)
-export const selectEntrySchema = createSelectSchema(entries)
-
-export const insertTagSchema = createInsertSchema(tags)
-export const selectTagSchema = createSelectSchema(tags)
-
-export const insertHabitTagSchema = createInsertSchema(habitTags)
-export const selectHabitTagSchema = createSelectSchema(habitTags)
-
-// Type exports
-export type User = typeof users.$inferSelect
-export type NewUser = typeof users.$inferInsert
-
-export type Habit = typeof habits.$inferSelect
-export type NewHabit = typeof habits.$inferInsert
-
-export type Entry = typeof entries.$inferSelect
-export type NewEntry = typeof entries.$inferInsert
-
-export type Tag = typeof tags.$inferSelect
-export type NewTag = typeof tags.$inferInsert
-
-export type HabitTag = typeof habitTags.$inferSelect
-export type NewHabitTag = typeof habitTags.$inferInsert
+// For compatibility with previous named exports
+export const users = User
+export const organizations = Organization
+export const orders = Order 
