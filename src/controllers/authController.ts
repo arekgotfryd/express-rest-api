@@ -1,39 +1,43 @@
 import type { Request, Response } from 'express'
 import bcrypt from 'bcrypt'
 import { generateToken } from '../utils/jwt.ts'
-import { users as User } from '../db/schema.ts'
+import { users as User } from '../models/user.ts'
+import { Organization } from '../models/organization.ts'
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, username, password, firstName, lastName } = req.body
+    const { email, username, password, firstName, lastName, organizationName } = req.body
 
     // Hash password
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12')
     const hashedPassword = await bcrypt.hash(password, saltRounds)
 
+    const organization = await Organization.findOne({ where: { name: organizationName } })
+    if (!organization) {
+      return res.status(400).json({ error: 'Organization does not exist' })
+    }
+
     // Create user via Sequelize
     const created = await User.create({
       email,
-      username,
       password: hashedPassword,
       firstName,
       lastName,
+      organizationId: organization.id,
     })
 
     const newUser = {
       id: created.id,
       email: created.email,
-      username: created.username,
       firstName: created.firstName ?? undefined,
       lastName: created.lastName ?? undefined,
-      createdAt: created.createdAt,
     }
 
     // Generate JWT
     const token = await generateToken({
       id: newUser.id,
       email: newUser.email,
-      username: newUser.username,
+      organizationId: organization.id,
     })
 
     res.status(201).json({
@@ -69,7 +73,6 @@ export const login = async (req: Request, res: Response) => {
     const token = await generateToken({
       id: user.id,
       email: user.email,
-      username: user.username,
     })
 
     res.json({
@@ -77,7 +80,6 @@ export const login = async (req: Request, res: Response) => {
       user: {
         id: user.id,
         email: user.email,
-        username: user.username,
         firstName: user.firstName ?? undefined,
         lastName: user.lastName ?? undefined,
       },

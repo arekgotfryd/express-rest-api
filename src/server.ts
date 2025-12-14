@@ -3,7 +3,6 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import authRoutes from './routes/authRoutes.ts'
-import habitRoutes from './routes/habitRoutes.ts'
 import userRoutes from './routes/userRoutes.ts'
 import morgan from 'morgan'
 
@@ -35,7 +34,6 @@ app.get('/health', (req, res) => {
 
 // Routes
 app.use('/api/auth', authRoutes)
-app.use('/api/habits', habitRoutes)
 app.use('/api/users', userRoutes)
 
 // 404 handler

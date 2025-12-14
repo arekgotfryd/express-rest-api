@@ -1,22 +1,27 @@
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.ts'
-import { users as User } from '../db/schema.ts'
-import bcrypt from 'bcrypt'
+import { UserService } from '../services/userService.ts'
 
-export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
+const userService = new UserService()
+
+export const getUsers = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const users = await userService.findAll(undefined, {
+      attributes: ['id', 'email', 'firstName', 'lastName'],
+    })
+    res.json({ users })
+  } catch (error) {
+    console.error('Get all users error', error)
+    res.status(500).json({ error: 'Failed to fetch users' })
+  }
+}
+
+export const getUser = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id
 
-    const user = await User.findByPk(userId, {
-      attributes: [
-        'id',
-        'email',
-        'username',
-        'firstName',
-        'lastName',
-        'createdAt',
-        'updatedAt',
-      ],
+    const user = await userService.findById(userId, {
+      attributes: ['id', 'email', 'username', 'firstName', 'lastName'],
     })
 
     if (!user) {
@@ -30,36 +35,24 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
   }
 }
 
-export const updateProfile = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
+export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id
-    const { email, username, firstName, lastName } = req.body
+    const { email, firstName, lastName } = req.body
 
-    const user = await User.findByPk(userId)
+    const user = await userService.findById(userId)
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    await user.update({
+    await userService.update(userId, {
       email,
-      username,
       firstName,
       lastName,
-      updatedAt: new Date(),
     })
 
-    const updatedUser = await User.findByPk(userId, {
-      attributes: [
-        'id',
-        'email',
-        'username',
-        'firstName',
-        'lastName',
-        'updatedAt',
-      ],
+    const updatedUser = await userService.findById(userId, {
+      attributes: ['id', 'email', 'firstName', 'lastName'],
     })
 
     res.json({
@@ -72,37 +65,17 @@ export const updateProfile = async (
   }
 }
 
-export const changePassword = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
+export const deleteUser = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user!.id
-    const { currentPassword, newPassword } = req.body
+    const deletedCount = await userService.delete(req.params.id)
 
-    const user = await User.findByPk(userId)
-    if (!user) {
+    if (deletedCount === 0) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    const isValidPassword = await bcrypt.compare(currentPassword, user.password)
-    if (!isValidPassword) {
-      return res.status(400).json({ error: 'Current password is incorrect' })
-    }
-
-    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12')
-    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds)
-
-    await user.update({
-      password: hashedNewPassword,
-      updatedAt: new Date(),
-    })
-
-    res.json({
-      message: 'Password changed successfully',
-    })
+    res.json({ message: 'User deleted successfully' })
   } catch (error) {
-    console.error('Change password error:', error)
-    res.status(500).json({ error: 'Failed to change password' })
+    console.error('Delete user error', error)
+    res.status(500).json({ error: 'Failed to delete an user' })
   }
 }

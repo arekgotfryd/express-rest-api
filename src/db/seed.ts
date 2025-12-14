@@ -1,5 +1,7 @@
 import { sequelize } from './connection.ts'
-import { users as User, organizations as Organization, orders as Order } from './schema.ts'
+import { users as User } from '../models/user.ts'
+import { orders as Order } from '../models/order.ts'
+import { organizations as Organization } from '../models/organization.ts'
 import { hashPassword } from '../utils/password.ts'
 
 async function seed() {
@@ -17,8 +19,16 @@ async function seed() {
 
     //Create organizations
     console.log('Creating organizations...')
-    const corpA = await Organization.create({ name: 'Corp A', industry: 'Finance', dateFounded: new Date('2000-01-01') })
-    const corpB = await Organization.create({ name: 'Corp B', industry: 'Technology', dateFounded: new Date('2010-01-01') })
+    const corpA = await Organization.create({
+      name: 'Corp A',
+      industry: 'Finance',
+      dateFounded: new Date('2000-01-01'),
+    })
+    const corpB = await Organization.create({
+      name: 'Corp B',
+      industry: 'Technology',
+      dateFounded: new Date('2010-01-01'),
+    })
 
     // Create demo users Corp A
     console.log('Creating demo users corp A...')
@@ -87,7 +97,6 @@ async function seed() {
       ],
     })
 
-
     // Query all organizations with their users and orders
     const orgsWithUsersAndOrders = await Organization.findAll({
       include: [
@@ -108,7 +117,6 @@ async function seed() {
       ],
     })
 
-
     // Sanity check
     console.log('✅ Database seeded successfully!')
     console.log('\n📊 Seed Summary:')
@@ -116,8 +124,15 @@ async function seed() {
     console.log('- 10 demo users created')
     console.log('- 20 demo orders created')
     console.log(`- Demo user has ${userWithOrders?.orders?.length || 0} orders`)
-    console.log(`- Total organizations in system: ${orgsWithUsersAndOrders?.length || 0}`)
-    console.log(`- Total orders in system: ${orgsWithUsersAndOrders.reduce((acc, org) => acc + (org.orders?.length || 0), 0)}`)
+    console.log(
+      `- Total organizations in system: ${orgsWithUsersAndOrders?.length || 0}`
+    )
+    console.log(
+      `- Total orders in system: ${orgsWithUsersAndOrders.reduce(
+        (acc, org) => acc + (org.orders?.length || 0),
+        0
+      )}`
+    )
     console.log('\n🔑 Login Credentials:')
     console.log('email: user1@corpa.com')
     console.log('Password: demo123')

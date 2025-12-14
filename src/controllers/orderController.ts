@@ -1,0 +1,94 @@
+import type { Response } from 'express'
+import type { AuthenticatedRequest } from '../middleware/auth.ts'
+import { OrderService } from '../services/orderService.ts'
+
+const orderService = new OrderService()
+const attributes = ['id', 'userId', 'organizationId', 'totalAmount']
+
+export const getOrders = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const orders = await orderService.findAll(undefined, {
+      attributes,
+    })
+    res.json({ orders })
+  } catch (error) {
+    console.error('Get all orders error', error)
+    res.status(500).json({ error: 'Failed to fetch orders' })
+  }
+}
+
+export const getOrder = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const orderId = req.params.id
+
+    const order = await orderService.findById(orderId, {
+      attributes,
+    })
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' })
+    }
+
+    res.json({ order })
+  } catch (error) {
+    console.error('Get order error:', error)
+    res.status(500).json({ error: 'Failed to fetch order' })
+  }
+}
+
+export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { totalAmount } = req.body
+    const userId = req.user!.id
+    const organizationId = req.user!.organizationId
+    await orderService.create({
+      userId,
+      organizationId,
+      totalAmount,
+    })
+
+    res.json({ message: 'Order has been created' })
+  } catch (error) {
+    console.error('Order create error:', error)
+    res.status(500).json({ error: 'Failed to create order' })
+  }
+}
+
+export const updateOrder = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const orderId = req.params.id
+    const { userId, organizationId, totalAmount } = req.body
+
+    const updatedOrders = await orderService.update(orderId, {
+      userId,
+      organizationId,
+      totalAmount,
+    })
+
+    if (updatedOrders[0] === 0) {
+      return res.status(404).json({ error: 'Order not found' })
+    }
+
+    res.json({
+      message: 'Order updated successfully',
+    })
+  } catch (error) {
+    console.error('Update order error:', error)
+    res.status(500).json({ error: 'Failed to update order' })
+  }
+}
+
+export const deleteOrder = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const deletedCount = await orderService.delete(req.params.id)
+
+    if (deletedCount === 0) {
+      return res.status(404).json({ error: 'Order not found' })
+    }
+
+    res.json({ message: 'Order deleted successfully' })
+  } catch (error) {
+    console.error('Delete order error', error)
+    res.status(500).json({ error: 'Failed to delete an order' })
+  }
+}
