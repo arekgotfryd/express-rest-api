@@ -6,10 +6,32 @@ const userService = new UserService()
 
 export const getUsers = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    // Pagination parameters
+    const page = parseInt(req.query.page as string) || 1
+    const limit = parseInt(req.query.limit as string) || 10
+    const offset = (page - 1) * limit
+
+    // Get total count for pagination metadata
+    const totalCount = await userService.count()
+
+    // Fetch paginated users
     const users = await userService.findAll(undefined, {
       attributes: ['id', 'email', 'firstName', 'lastName'],
+      limit,
+      offset,
     })
-    res.json({ users })
+
+    res.json({
+      users,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNextPage: page < Math.ceil(totalCount / limit),
+        hasPreviousPage: page > 1,
+      },
+    })
   } catch (error) {
     console.error('Get all users error', error)
     res.status(500).json({ error: 'Failed to fetch users' })

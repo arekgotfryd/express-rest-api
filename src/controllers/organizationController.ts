@@ -11,10 +11,30 @@ export const getOrganizations = async (
   res: Response
 ) => {
   try {
+    const page = parseInt(req.query.page as string) || 1
+    const limit = parseInt(req.query.limit as string) || 10
+    const offset = (page - 1) * limit
+
+    // Get total count for pagination metadata
+    const totalCount = await organizationService.count()
+
     const organizations = await organizationService.findAll(undefined, {
       attributes,
+      limit,
+      offset,
     })
-    res.json({ organizations })
+
+    res.json({
+      organizations,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNextPage: page < Math.ceil(totalCount / limit),
+        hasPreviousPage: page > 1,
+      },
+    })
   } catch (error) {
     console.error('Get all organizations error', error)
     res.status(500).json({ error: 'Failed to fetch organizations' })
