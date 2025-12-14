@@ -1,11 +1,20 @@
-
-import { DataTypes, Model, type InferAttributes, type InferCreationAttributes, type CreationOptional, type ForeignKey, type NonAttribute } from 'sequelize'
-import { User } from './user.ts'
-import { Organization } from './organization.ts'
+import {
+  DataTypes,
+  Model,
+  type InferAttributes,
+  type InferCreationAttributes,
+  type CreationOptional,
+  type ForeignKey,
+} from 'sequelize'
 import { sequelize } from '../db/connection.ts'
+import type { User } from './user.ts'
+import type { Organization } from './organization.ts'
 
 // Order model
-export class Order extends Model<InferAttributes<Order>, InferCreationAttributes<Order>> {
+export class Order extends Model<
+  InferAttributes<Order>,
+  InferCreationAttributes<Order>
+> {
   declare id: CreationOptional<string>
   declare totalAmount: number
   declare userId: ForeignKey<User['id']>
@@ -45,9 +54,4 @@ Order.init(
   }
 )
 
-Order.belongsTo(User, { foreignKey: 'userId', as: 'user' })
-Order.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organization' })
-// export type OrderAttributes = InferAttributes<Order>
-// export type NewOrderAttributes = InferCreationAttributes<Order>
-
-export const orders = Order 
+export const orders = Order

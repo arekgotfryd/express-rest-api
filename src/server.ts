@@ -5,6 +5,8 @@ import helmet from 'helmet'
 import authRoutes from './routes/authRoutes.ts'
 import userRoutes from './routes/userRoutes.ts'
 import morgan from 'morgan'
+import orderRoutes from './routes/orderRoutes.ts'
+import organizationRoutes from './routes/organizationRoutes.ts'
 
 const app = express()
 
@@ -35,6 +37,8 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
+app.use('/api/orders', orderRoutes)
+app.use('/api/organizations', organizationRoutes)
 
 // 404 handler
 app.use((req, res) => {

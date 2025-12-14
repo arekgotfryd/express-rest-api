@@ -1,7 +1,5 @@
 import { sequelize } from './connection.ts'
-import { users as User } from '../models/user.ts'
-import { orders as Order } from '../models/order.ts'
-import { organizations as Organization } from '../models/organization.ts'
+import { User, Order, Organization } from '../models/index.ts'
 import { hashPassword } from '../utils/password.ts'
 
 async function seed() {

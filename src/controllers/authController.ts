@@ -1,8 +1,7 @@
 import type { Request, Response } from 'express'
 import bcrypt from 'bcrypt'
 import { generateToken } from '../utils/jwt.ts'
-import { users as User } from '../models/user.ts'
-import { Organization } from '../models/organization.ts'
+import { User, Organization } from '../models/index.ts'
 
 export const register = async (req: Request, res: Response) => {
   try {

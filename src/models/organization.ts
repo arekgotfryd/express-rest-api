@@ -5,10 +5,9 @@ import {
   type InferCreationAttributes,
   type CreationOptional,
   type NonAttribute,
+  type Order,
 } from 'sequelize'
 import { sequelize } from '../db/connection.ts'
-import { User } from './user.ts'
-import { Order } from './order.ts'
 
 // Organization model
 export class Organization extends Model<
@@ -52,17 +51,5 @@ Organization.init(
     underscored: true,
   }
 )
-// Associations
-Organization.hasMany(User, {
-  foreignKey: 'organizationId',
-  as: 'users',
-  onDelete: 'CASCADE',
-})
-Organization.hasMany(Order, {
-  foreignKey: 'organizationId',
-  as: 'orders',
-  onDelete: 'CASCADE'
-})
-export type OrganizationAttributes = InferAttributes<Organization>
-export type NewOrganizationAttributes = InferCreationAttributes<Organization>
+
 export const organizations = Organization

@@ -1,7 +1,6 @@
-import { DataTypes, Model, type InferAttributes, type InferCreationAttributes, type CreationOptional, type ForeignKey, type NonAttribute } from 'sequelize'
+import { DataTypes, Model, type InferAttributes, type InferCreationAttributes, type CreationOptional, type ForeignKey, type NonAttribute, type Order } from 'sequelize'
 import { sequelize } from '../db/connection.ts'
-import { Organization } from './organization.ts'
-import { Order } from './order.ts'
+import type { Organization } from './organization.ts'
 
 // User model
 export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
@@ -10,7 +9,6 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   declare password: string
   declare firstName: string | null
   declare lastName: string | null
-  declare organizationName: NonAttribute<string>
   declare organizationId: ForeignKey<Organization['id']>
   declare orders: NonAttribute<Order[]>
 }
@@ -56,15 +54,5 @@ User.init(
     updatedAt: false,
   }
 )
-User.belongsTo(Organization, { foreignKey: 'organizationId', as: 'user' })
 
-User.hasMany(Order, {
-  foreignKey: 'userId',
-  as: 'orders',
-  onDelete: 'CASCADE',
-})
-// Type exports (compatible replacements)
-export type UserAttributes = InferAttributes<User>
-export type NewUserAttributes = InferCreationAttributes<User>
-// For compatibility with previous named exports
 export const users = User

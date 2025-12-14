@@ -5,6 +5,6 @@ export const createOrderSchema = z.object({
 })
 export const updateOrderSchema = z.object({
   totalAmount: z.number().positive(),
-  userId: z.uuid({version: 'v4'}),
-  organizationId: z.uuid({version: 'v4'}),
+  userId: z.uuid({ version: 'v4' }).optional(),
+  organizationId: z.uuid({ version: 'v4' }).optional(),
 })
