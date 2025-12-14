@@ -38,7 +38,6 @@ export const getUser = async (req: AuthenticatedRequest, res: Response) => {
 export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id
-    const { email, firstName, lastName } = req.body
 
     const user = await userService.findById(userId)
     if (!user) {
@@ -46,22 +45,15 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
     }
 
     await userService.update(userId, {
-      email,
-      firstName,
-      lastName,
-    })
-
-    const updatedUser = await userService.findById(userId, {
-      attributes: ['id', 'email', 'firstName', 'lastName'],
+      ...req.body,
     })
 
     res.json({
-      message: 'Profile updated successfully',
-      user: updatedUser,
+      message: 'User updated successfully',
     })
   } catch (error) {
-    console.error('Update profile error:', error)
-    res.status(500).json({ error: 'Failed to update profile' })
+    console.error('User update error:', error)
+    res.status(500).json({ error: 'Failed to update user' })
   }
 }
 

@@ -5,6 +5,7 @@ import {
   type InferCreationAttributes,
   type CreationOptional,
   type ForeignKey,
+  type NonAttribute,
 } from 'sequelize'
 import { sequelize } from '../db/connection.ts'
 import type { User } from './user.ts'
@@ -19,6 +20,8 @@ export class Order extends Model<
   declare totalAmount: number
   declare userId: ForeignKey<User['id']>
   declare organizationId: ForeignKey<Organization['id']>
+  declare organization?: NonAttribute<Organization>
+  declare user?: NonAttribute<User>
 }
 
 Order.init(

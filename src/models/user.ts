@@ -1,14 +1,26 @@
-import { DataTypes, Model, type InferAttributes, type InferCreationAttributes, type CreationOptional, type ForeignKey, type NonAttribute, type Order } from 'sequelize'
+import {
+  DataTypes,
+  Model,
+  type InferAttributes,
+  type InferCreationAttributes,
+  type CreationOptional,
+  type ForeignKey,
+  type NonAttribute,
+  type Order,
+} from 'sequelize'
 import { sequelize } from '../db/connection.ts'
 import type { Organization } from './organization.ts'
 
 // User model
-export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
+export class User extends Model<
+  InferAttributes<User>,
+  InferCreationAttributes<User>
+> {
   declare id: CreationOptional<string>
   declare email: string
   declare password: string
-  declare firstName: string | null
-  declare lastName: string | null
+  declare firstName: string
+  declare lastName: string
   declare organizationId: ForeignKey<Organization['id']>
   declare orders: NonAttribute<Order[]>
 }

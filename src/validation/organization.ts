@@ -1,13 +1,13 @@
 import { z } from 'zod'
 
-export const createOrganizationSchema = z.object({
-  name: z.string().max(100),
-  industry: z.string().max(100),
-  dateFounded: z.date(),
+export const organizationSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Please provide organization name')
+    .max(100, 'Organization name too long'),
+  industry: z
+    .string()
+    .min(1, 'Please provide industry')
+    .max(100, 'Industry name too long'),
+  dateFounded: z.date().max(new Date(), 'Date founded must be in the past'),
 })
-
-export const updateOrganizationSchema = createOrganizationSchema
-  .partial()
-  .refine((obj) => Object.keys(obj).length > 0, {
-    message: 'At least one field must be provided',
-  })

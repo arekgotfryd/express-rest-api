@@ -1,6 +1,7 @@
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.ts'
 import { OrderService } from '../services/orderService.ts'
+import type { Order } from '../models/order.ts'
 
 const orderService = new OrderService()
 const attributes = ['id', 'userId', 'organizationId', 'totalAmount']
@@ -21,8 +22,18 @@ export const getOrder = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const orderId = req.params.id
 
-    const order = await orderService.findById(orderId, {
+    const order: Order = await orderService.findById(orderId, {
       attributes,
+      include: [
+        {
+          association: 'user', 
+          attributes: ['id', 'email'], 
+        },
+        {
+          association: 'organization',
+          attributes: ['id', 'name']
+        }
+      ],
     })
 
     if (!order) {

@@ -8,7 +8,7 @@ import {
   getOrders,
   updateOrder,
 } from '../controllers/orderController.ts'
-import { createOrderSchema, updateOrderSchema } from '../validation/order.ts'
+import { orderSchema } from '../validation/order.ts'
 
 const router = Router()
 
@@ -19,8 +19,8 @@ router.use(authenticateToken)
 //TODO add paging
 router.get('/', getOrders)
 router.get('/:id', getOrder)
-router.post('/:id', validateBody(createOrderSchema), createOrder)
-router.put('/:id', validateBody(updateOrderSchema), updateOrder)
+router.post('/:id', validateBody(orderSchema), createOrder)
+router.put('/:id', validateBody(orderSchema), updateOrder)
 router.delete('/:id', deleteOrder)
 
 export default router

@@ -8,8 +8,7 @@ import {
   updateOrganization,
 } from '../controllers/organizationController.ts'
 import {
-  createOrganizationSchema,
-  updateOrganizationSchema,
+  organizationSchema,
 } from '../validation/organization.ts'
 
 const router = Router()
@@ -21,8 +20,8 @@ router.use(authenticateToken)
 //TODO add paging
 router.get('/', getOrganizations)
 router.get('/:id', getOrganization)
-router.post('/:id', validateBody(createOrganizationSchema), createOrganization)
-router.put('/:id', validateBody(updateOrganizationSchema), updateOrganization)
+router.post('/:id', validateBody(organizationSchema), createOrganization)
+router.put('/:id', validateBody(organizationSchema), updateOrganization)
 router.delete('/:id', getOrganization)
 
 export default router

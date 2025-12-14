@@ -5,13 +5,15 @@ import { User, Organization } from '../models/index.ts'
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, username, password, firstName, lastName, organizationName } = req.body
+    const { email, password, firstName, lastName, organizationName } = req.body
 
     // Hash password
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12')
     const hashedPassword = await bcrypt.hash(password, saltRounds)
 
-    const organization = await Organization.findOne({ where: { name: organizationName } })
+    const organization = await Organization.findOne({
+      where: { name: organizationName },
+    })
     if (!organization) {
       return res.status(400).json({ error: 'Organization does not exist' })
     }
