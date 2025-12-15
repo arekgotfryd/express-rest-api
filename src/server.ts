@@ -8,6 +8,8 @@ import morgan from 'morgan'
 import orderRoutes from './routes/orderRoutes.ts'
 import organizationRoutes from './routes/organizationRoutes.ts'
 import { sequelize } from './db/connection.ts'
+import swaggerUi from 'swagger-ui-express'
+import { swaggerSpec } from './config/swagger.ts'
 
 const app = express()
 
@@ -26,6 +28,10 @@ app.use(
     skip: () => isTestEnv(),
   })
 )
+
+// Swagger documentation
+app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
