@@ -20,12 +20,12 @@ app.use(
     credentials: true,
   })
 )
-
+console.log('LOG_LEVEL: '+env.LOG_LEVEL)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(
   morgan('dev', {
-    skip: () => isTestEnv(),
+    skip: () => isTestEnv() || env.LOG_LEVEL !== 'debug',
   })
 )
 
@@ -81,7 +81,6 @@ app.get('/ready', async (req, res) => {
     })
   }
 })
-
 
 // Routes
 app.use('/api/auth', authRoutes)
