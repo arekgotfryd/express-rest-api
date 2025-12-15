@@ -95,20 +95,12 @@ router.get('/:id', getOrganization)
 
 /**
  * @swagger
- * /api/organizations/{id}:
+ * /api/organizations:
  *   post:
  *     summary: Create a new organization
  *     tags: [Organizations]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Organization ID
  *     requestBody:
  *       required: true
  *       content:
@@ -138,7 +130,7 @@ router.get('/:id', getOrganization)
  *       500:
  *         description: Server error
  */
-router.post('/:id', validateBody(organizationSchema), createOrganization)
+router.post('/', validateBody(organizationSchema), createOrganization)
 
 /**
  * @swagger

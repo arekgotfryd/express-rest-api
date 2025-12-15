@@ -94,20 +94,12 @@ router.get('/:id', getOrder)
 
 /**
  * @swagger
- * /api/orders/{id}:
+ * /api/orders:
  *   post:
  *     summary: Create a new order
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Order ID
  *     requestBody:
  *       required: true
  *       content:
@@ -128,7 +120,7 @@ router.get('/:id', getOrder)
  *       500:
  *         description: Server error
  */
-router.post('/:id', validateBody(orderSchema), createOrder)
+router.post('/', validateBody(orderSchema), createOrder)
 
 /**
  * @swagger
