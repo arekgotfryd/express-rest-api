@@ -1,6 +1,7 @@
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.ts'
 import { UserService } from '../services/userService.ts'
+import { logger } from '../utils/logger.ts'
 
 const userService = new UserService()
 
@@ -33,7 +34,7 @@ export const getUsers = async (req: AuthenticatedRequest, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('Get all users error', error)
+    logger.error('Get all users error', error)
     res.status(500).json({ error: 'Failed to fetch users' })
   }
 }
@@ -52,7 +53,7 @@ export const getUser = async (req: AuthenticatedRequest, res: Response) => {
 
     res.json({ user })
   } catch (error) {
-    console.error('Get profile error:', error)
+    logger.error('Get profile error:', error)
     res.status(500).json({ error: 'Failed to fetch profile' })
   }
 }
@@ -74,7 +75,7 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
       message: 'User updated successfully',
     })
   } catch (error) {
-    console.error('User update error:', error)
+    logger.error('User update error:', error)
     res.status(500).json({ error: 'Failed to update user' })
   }
 }
@@ -89,7 +90,7 @@ export const deleteUser = async (req: AuthenticatedRequest, res: Response) => {
 
     res.json({ message: 'User deleted successfully' })
   } catch (error) {
-    console.error('Delete user error', error)
+    logger.error('Delete user error', error)
     res.status(500).json({ error: 'Failed to delete an user' })
   }
 }

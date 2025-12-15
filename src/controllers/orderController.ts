@@ -2,6 +2,7 @@ import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.ts'
 import { OrderService } from '../services/orderService.ts'
 import type { Order } from '../models/order.ts'
+import { logger } from '../utils/logger.ts'
 
 const orderService = new OrderService()
 const attributes = ['id', 'userId', 'organizationId', 'totalAmount']
@@ -35,7 +36,7 @@ export const getOrders = async (req: AuthenticatedRequest, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('Get all orders error', error)
+    logger.error('Get all orders error', error)
     res.status(500).json({ error: 'Failed to fetch orders' })
   }
 }
@@ -64,7 +65,7 @@ export const getOrder = async (req: AuthenticatedRequest, res: Response) => {
 
     res.json({ order })
   } catch (error) {
-    console.error('Get order error:', error)
+    logger.error('Get order error:', error)
     res.status(500).json({ error: 'Failed to fetch order' })
   }
 }
@@ -82,7 +83,7 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
 
     res.json({ message: 'Order has been created' })
   } catch (error) {
-    console.error('Order create error:', error)
+    logger.error('Order create error:', error)
     res.status(500).json({ error: 'Failed to create order' })
   }
 }
@@ -106,7 +107,7 @@ export const updateOrder = async (req: AuthenticatedRequest, res: Response) => {
       message: 'Order updated successfully',
     })
   } catch (error) {
-    console.error('Update order error:', error)
+    logger.error('Update order error:', error)
     res.status(500).json({ error: 'Failed to update order' })
   }
 }
@@ -121,7 +122,7 @@ export const deleteOrder = async (req: AuthenticatedRequest, res: Response) => {
 
     res.json({ message: 'Order deleted successfully' })
   } catch (error) {
-    console.error('Delete order error', error)
+    logger.error('Delete order error', error)
     res.status(500).json({ error: 'Failed to delete an order' })
   }
 }

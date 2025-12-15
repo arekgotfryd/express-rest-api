@@ -1,4 +1,5 @@
 import { sequelize } from '../db/connection.ts'
+import { logger } from '../utils/logger.ts'
 
 export const health = async (req, res) => {
   try {
@@ -8,7 +9,7 @@ export const health = async (req, res) => {
       service: 'Express REST API',
     })
   } catch (error) {
-    console.error('Error while checking health')
+    logger.error('Error while checking health')
     res.status(503).json({ message: 'Not healthy' })
   }
 }

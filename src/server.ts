@@ -59,7 +59,7 @@ app.use(
     res: express.Response,
     next: express.NextFunction
   ) => {
-    console.error(err.stack)
+    logger.error(err.stack)
     res.status(500).json({
       error: 'Something went wrong!',
       ...(isDev() && { details: err.message }),

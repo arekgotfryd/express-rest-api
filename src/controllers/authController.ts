@@ -2,6 +2,7 @@ import type { Request, Response } from 'express'
 import bcrypt from 'bcrypt'
 import { generateToken } from '../utils/jwt.ts'
 import { User, Organization } from '../models/index.ts'
+import { logger } from '../utils/logger.ts'
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -47,7 +48,7 @@ export const register = async (req: Request, res: Response) => {
       token,
     })
   } catch (error) {
-    console.error('Registration error:', error)
+    logger.error('Registration error:', error)
     res.status(500).json({ error: 'Failed to create user' })
   }
 }
@@ -87,7 +88,7 @@ export const login = async (req: Request, res: Response) => {
       token,
     })
   } catch (error) {
-    console.error('Login error:', error)
+    logger.error('Login error:', error)
     res.status(500).json({ error: 'Failed to login' })
   }
 }

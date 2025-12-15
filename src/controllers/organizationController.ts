@@ -1,6 +1,7 @@
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.ts'
 import { OrganizationService } from '../services/organizationService.ts'
+import { logger } from '../utils/logger.ts'
 
 const organizationService = new OrganizationService()
 
@@ -36,7 +37,7 @@ export const getOrganizations = async (
       },
     })
   } catch (error) {
-    console.error('Get all organizations error', error)
+    logger.error('Get all organizations error', error)
     res.status(500).json({ error: 'Failed to fetch organizations' })
   }
 }
@@ -58,7 +59,7 @@ export const getOrganization = async (
 
     res.json({ organization })
   } catch (error) {
-    console.error('Get organization error:', error)
+    logger.error('Get organization error:', error)
     res.status(500).json({ error: 'Failed to fetch organization' })
   }
 }
@@ -77,7 +78,7 @@ export const createOrganization = async (
 
     res.json({ message: 'Organization has been created' })
   } catch (error) {
-    console.error('Organizaion create error:', error)
+    logger.error('Organizaion create error:', error)
     res.status(500).json({ error: 'Failed to create organization' })
   }
 }
@@ -104,7 +105,7 @@ export const updateOrganization = async (
       message: 'Organization updated successfully',
     })
   } catch (error) {
-    console.error('Update organization error:', error)
+    logger.error('Update organization error:', error)
     res.status(500).json({ error: 'Failed to update organization' })
   }
 }
@@ -119,7 +120,7 @@ export const deleteOrder = async (req: AuthenticatedRequest, res: Response) => {
 
     res.json({ message: 'Organization deleted successfully' })
   } catch (error) {
-    console.error('Delete organization error', error)
+    logger.error('Delete organization error', error)
     res.status(500).json({ error: 'Failed to delete an organization' })
   }
 }

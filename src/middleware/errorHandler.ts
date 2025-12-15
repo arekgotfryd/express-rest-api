@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
 import env from '../../env.ts'
+import { logger } from '../utils/logger.ts'
 
 export interface CustomError extends Error {
   status?: number
@@ -12,7 +13,7 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  console.error(err.stack)
+  logger.error(err.stack)
 
   // Default error
   let status = err.status || 500
