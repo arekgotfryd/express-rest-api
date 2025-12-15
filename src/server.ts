@@ -9,7 +9,9 @@ import organizationRoutes from './routes/organizationRoutes.ts'
 import healthRoutes from './routes/healthRoutes.ts'
 import swaggerUi from 'swagger-ui-express'
 import { swaggerSpec } from './config/swagger.ts'
-import audit from 'express-requests-logger'
+import logger from './utils/logger.ts'
+import morgan from 'morgan'
+
 const app = express()
 
 app.use(helmet())
@@ -19,23 +21,13 @@ app.use(
     credentials: true,
   })
 )
+
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(
-  audit({
-    logger: { info: console.log }, // Logger object
-    excludeURLs: ['health', 'readiness'], // Exclude paths which enclude 'health' & 'metrics'
-    request: {
-      maskBody: ['password'], // Mask 'password' field in incoming requests
-      excludeHeaders: ['authorization'], // Exclude 'authorization' header from requests
-    },
-    response: {
-      excludeHeaders: ['*'], // Exclude all headers from responses,
-      excludeBody: ['*'], // Exclude all body from responses
-    },
-    shouldSkipAuditFunc: function (req, res) {
-      return isTestEnv() || env.LOG_LEVEL !== 'debug'
-    },
+  morgan('combined', {
+    stream: { write: (msg) => logger.info(msg.trim()) },
+    skip: () => isTestEnv() || env.LOG_LEVEL !== 'debug',
   })
 )
 
