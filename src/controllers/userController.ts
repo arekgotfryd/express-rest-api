@@ -1,9 +1,7 @@
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.ts'
-import { UserService } from '../services/userService.ts'
+import { container } from '../container.ts'
 import { logger } from '../utils/logger.ts'
-
-const userService = new UserService()
 
 export const getUsers = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -13,10 +11,10 @@ export const getUsers = async (req: AuthenticatedRequest, res: Response) => {
     const offset = (page - 1) * limit
 
     // Get total count for pagination metadata
-    const totalCount = await userService.count()
+    const totalCount = await container.userService.count()
 
     // Fetch paginated users
-    const users = await userService.findAll(undefined, {
+    const users = await container.userService.findAll(undefined, {
       attributes: ['id', 'email', 'firstName', 'lastName'],
       limit,
       offset,
@@ -43,7 +41,7 @@ export const getUser = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id
 
-    const user = await userService.findById(userId, {
+    const user = await container.userService.findById(userId, {
       attributes: ['id', 'email', 'username', 'firstName', 'lastName'],
     })
 
@@ -62,12 +60,12 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user!.id
 
-    const user = await userService.findById(userId)
+    const user = await container.userService.findById(userId)
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    await userService.update(userId, {
+    await container.userService.update(userId, {
       ...req.body,
     })
 
@@ -82,7 +80,7 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
 
 export const deleteUser = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const deletedCount = await userService.delete(req.params.id)
+    const deletedCount = await container.userService.delete(req.params.id)
 
     if (deletedCount === 0) {
       return res.status(404).json({ error: 'User not found' })

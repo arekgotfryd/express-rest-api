@@ -1,10 +1,9 @@
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.ts'
-import { OrderService } from '../services/orderService.ts'
+import { container } from '../container.ts'
 import type { Order } from '../models/order.ts'
 import { logger } from '../utils/logger.ts'
 
-const orderService = new OrderService()
 const attributes = ['id', 'userId', 'organizationId', 'totalAmount']
 
 export const getOrders = async (req: AuthenticatedRequest, res: Response) => {
@@ -15,10 +14,10 @@ export const getOrders = async (req: AuthenticatedRequest, res: Response) => {
     const offset = (page - 1) * limit
 
     // Get total count for pagination metadata
-    const totalCount = await orderService.count()
+    const totalCount = await container.orderService.count()
 
     // Fetch paginated orders
-    const orders = await orderService.findAll(undefined, {
+    const orders = await container.orderService.findAll(undefined, {
       attributes,
       limit,
       offset,
@@ -45,17 +44,17 @@ export const getOrder = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const orderId = req.params.id
 
-    const order: Order = await orderService.findById(orderId, {
+    const order: Order = await container.orderService.findById(orderId, {
       attributes,
       include: [
         {
-          association: 'user', 
-          attributes: ['id', 'email'], 
+          association: 'user',
+          attributes: ['id', 'email'],
         },
         {
           association: 'organization',
-          attributes: ['id', 'name']
-        }
+          attributes: ['id', 'name'],
+        },
       ],
     })
 
@@ -75,13 +74,13 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
     const { totalAmount } = req.body
     const userId = req.user!.id
     const organizationId = req.user!.organizationId
-    await orderService.create({
+    await container.orderService.create({
       userId,
       organizationId,
       totalAmount,
     })
 
-    res.json({ message: 'Order has been created' })
+    res.status(201).json({ message: 'Order has been created' })
   } catch (error) {
     logger.error('Order create error:', error)
     res.status(500).json({ error: 'Failed to create order' })
@@ -93,7 +92,7 @@ export const updateOrder = async (req: AuthenticatedRequest, res: Response) => {
     const orderId = req.params.id
     const { userId, organizationId, totalAmount } = req.body
 
-    const updatedOrders = await orderService.update(orderId, {
+    const updatedOrders = await container.orderService.update(orderId, {
       userId,
       organizationId,
       totalAmount,
@@ -114,7 +113,7 @@ export const updateOrder = async (req: AuthenticatedRequest, res: Response) => {
 
 export const deleteOrder = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const deletedCount = await orderService.delete(req.params.id)
+    const deletedCount = await container.orderService.delete(req.params.id)
 
     if (deletedCount === 0) {
       return res.status(404).json({ error: 'Order not found' })
@@ -126,3 +125,4 @@ export const deleteOrder = async (req: AuthenticatedRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to delete an order' })
   }
 }
+
