@@ -1,20 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../../src/middleware/auth.ts'
+import { container } from '../../src/container.ts'
 
-const mockOrderService = {
-  create: vi.fn(),
-  findAll: vi.fn(),
-  findById: vi.fn(),
-  update: vi.fn(),
-  delete: vi.fn(),
-  count: vi.fn(),
-  getTotalAmountByUser: vi.fn(),
-}
+// const mockOrderService =
 
 vi.mock('../../src/container.ts', () => ({
   container: {
-    orderService: mockOrderService,
+    orderService: {
+      create: vi.fn(),
+      findAll: vi.fn(),
+      findById: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
+      getTotalAmountByUser: vi.fn(),
+    },
   },
 }))
 vi.mock('../../src/utils/logger.ts', () => {
@@ -73,14 +74,14 @@ describe('Order Controller', () => {
       }
 
       mockRequest.body = orderData
-      mockOrderService.create.mockResolvedValue(createdOrder as any)
+      vi.mocked(container.orderService.create).mockResolvedValue(createdOrder as any)
 
       await createOrder(
         mockRequest as AuthenticatedRequest,
         mockResponse as Response
       )
 
-      expect(mockOrderService.create).toHaveBeenCalledWith(orderData)
+      expect(container.orderService.create).toHaveBeenCalledWith(orderData)
       expect(mockResponse.status).toHaveBeenCalledWith(201)
       expect(mockResponse.json).toHaveBeenCalledWith({
         message: 'Order has been created',
@@ -90,7 +91,7 @@ describe('Order Controller', () => {
     it('should handle creation errors', async () => {
       mockRequest.body = { userId: 'user-123' }
 
-      mockOrderService.create.mockRejectedValue(new Error('Creation failed'))
+      vi.mocked(container.orderService.create).mockRejectedValue(new Error('Creation failed'))
 
       await createOrder(
         mockRequest as AuthenticatedRequest,
@@ -113,14 +114,14 @@ describe('Order Controller', () => {
       }
 
       mockRequest.params = { id: 'order-123' }
-      mockOrderService.findById.mockResolvedValue(order as any)
+      vi.mocked(container.orderService.findById).mockResolvedValue(order as any)
 
       await getOrder(
         mockRequest as AuthenticatedRequest,
         mockResponse as Response
       )
 
-      expect(mockOrderService.findById).toHaveBeenCalledWith(
+      expect(container.orderService.findById).toHaveBeenCalledWith(
         'order-123',
         expect.anything()
       )
@@ -129,7 +130,7 @@ describe('Order Controller', () => {
 
     it('should return 404 if order not found', async () => {
       mockRequest.params = { id: 'nonexistent' }
-      mockOrderService.findById.mockResolvedValue(null)
+      vi.mocked(container.orderService.findById).mockResolvedValue(null)
 
       await getOrder(
         mockRequest as AuthenticatedRequest,
@@ -153,14 +154,14 @@ describe('Order Controller', () => {
       mockRequest.params = { id: 'order-123' }
       mockRequest.body = updateData
 
-      mockOrderService.update.mockResolvedValue([1])
+      vi.mocked(container.orderService.update).mockResolvedValue([1])
 
       await updateOrder(
         mockRequest as AuthenticatedRequest,
         mockResponse as Response
       )
 
-      expect(mockOrderService.update).toHaveBeenCalledWith(
+      expect(container.orderService.update).toHaveBeenCalledWith(
         'order-123',
         updateData
       )
@@ -174,8 +175,8 @@ describe('Order Controller', () => {
       mockRequest.params = { id: 'nonexistent' }
       mockRequest.body = { status: 'completed' }
 
-      mockOrderService.findById.mockResolvedValue(null)
-      mockOrderService.update.mockResolvedValue([0])
+      vi.mocked(container.orderService.findById).mockResolvedValue(null)
+      vi.mocked(container.orderService.update).mockResolvedValue([0])
 
       await updateOrder(
         mockRequest as AuthenticatedRequest,
@@ -192,20 +193,22 @@ describe('Order Controller', () => {
   describe('deleteOrder', () => {
     it('should delete an order', async () => {
       mockRequest.params = { id: 'order-123' }
-      mockOrderService.delete.mockResolvedValue(1)
+      vi.mocked(container.orderService.delete).mockResolvedValue(1)
 
       await deleteOrder(
         mockRequest as AuthenticatedRequest,
         mockResponse as Response
       )
 
-      expect(mockOrderService.delete).toHaveBeenCalledWith('order-123')
-      expect(mockResponse.json).toHaveBeenCalledWith({message: 'Order deleted successfully'})
+      expect(container.orderService.delete).toHaveBeenCalledWith('order-123')
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Order deleted successfully',
+      })
     })
 
     it('should return 404 if order not found', async () => {
       mockRequest.params = { id: 'nonexistent' }
-      mockOrderService.delete.mockResolvedValue(0)
+      vi.mocked(container.orderService.delete).mockResolvedValue(0)
 
       await deleteOrder(
         mockRequest as AuthenticatedRequest,

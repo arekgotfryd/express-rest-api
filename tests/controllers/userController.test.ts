@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../../src/middleware/auth.ts'
-
-const mockUserService = {
-  findAll: vi.fn(),
-  findById: vi.fn(),
-  update: vi.fn(),
-  delete: vi.fn(),
-  count: vi.fn(),
-}
+import { container } from '../../src/container.ts'
+import type { User } from '../../src/models/user.ts'
 
 vi.mock('../../src/container.ts', () => ({
   container: {
-    userService: mockUserService,
+    userService: {
+      findAll: vi.fn(),
+      findById: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
+    },
   },
 }))
 
@@ -59,12 +59,26 @@ describe('UserController', () => {
   describe('getUsers', () => {
     it('should return paginated users', async () => {
       const mockUsers = [
-        { id: 'user-1', email: 'user1@example.com' },
-        { id: 'user-2', email: 'user2@example.com' },
+        {
+          id: 'user-123',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          organizationId: 'org-123',
+        },
+        {
+          id: 'user-123',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          organizationId: 'org-123',
+        },
       ]
 
-      mockUserService.count.mockResolvedValue(20)
-      mockUserService.findAll.mockResolvedValue(mockUsers)
+      vi.mocked(container.userService.count).mockResolvedValue(20)
+      vi.mocked(container.userService.findAll).mockResolvedValue(
+        mockUsers as User[]
+      )
 
       mockRequest.query = { page: '1', limit: '10' }
 
@@ -73,8 +87,8 @@ describe('UserController', () => {
         mockResponse as Response
       )
 
-      expect(mockUserService.count).toHaveBeenCalled()
-      expect(mockUserService.findAll).toHaveBeenCalledWith(undefined, {
+      expect(container.userService.count).toHaveBeenCalled()
+      expect(container.userService.findAll).toHaveBeenCalledWith(undefined, {
         attributes: ['id', 'email', 'firstName', 'lastName'],
         limit: 10,
         offset: 0,
@@ -94,15 +108,15 @@ describe('UserController', () => {
     })
 
     it('should use default pagination values', async () => {
-      mockUserService.count.mockResolvedValue(5)
-      mockUserService.count.mockResolvedValue(0)
+      vi.mocked(container.userService.count).mockResolvedValue(5)
+      vi.mocked(container.userService.findAll).mockResolvedValue([])
 
       await getUsers(
         mockRequest as AuthenticatedRequest,
         mockResponse as Response
       )
 
-      expect(mockUserService.findAll).toHaveBeenCalledWith(undefined, {
+      expect(container.userService.findAll).toHaveBeenCalledWith(undefined, {
         attributes: ['id', 'email', 'firstName', 'lastName'],
         limit: 10,
         offset: 0,
@@ -110,7 +124,9 @@ describe('UserController', () => {
     })
 
     it('should handle errors', async () => {
-      mockUserService.findAll.mockRejectedValue(new Error('Database error'))
+      vi.mocked(container.userService.findAll).mockRejectedValue(
+        new Error('Database error')
+      )
 
       await getUsers(
         mockRequest as AuthenticatedRequest,
@@ -130,16 +146,20 @@ describe('UserController', () => {
         id: 'user-123',
         email: 'test@example.com',
         firstName: 'Test',
+        lastName: 'User',
+        organizationId: 'org-123',
       }
 
-      mockUserService.findById.mockResolvedValue(mockUser)
+      vi.mocked(container.userService.findById).mockResolvedValue(
+        mockUser as User
+      )
 
       await getUser(
         mockRequest as AuthenticatedRequest,
         mockResponse as Response
       )
 
-      expect(mockUserService.findById).toHaveBeenCalledWith('user-123', {
+      expect(container.userService.findById).toHaveBeenCalledWith('user-123', {
         attributes: ['id', 'email', 'username', 'firstName', 'lastName'],
       })
       expect(mockResponse.json).toHaveBeenCalledWith({ user: mockUser })
@@ -152,7 +172,7 @@ describe('UserController', () => {
         firstName: 'Test',
       }
       mockRequest.user = mockUser as any
-      mockUserService.findById.mockResolvedValue(null)
+      vi.mocked(container.userService.findById).mockResolvedValue(null)
 
       await getUser(
         mockRequest as AuthenticatedRequest,
@@ -166,7 +186,9 @@ describe('UserController', () => {
     })
 
     it('should handle errors', async () => {
-      mockUserService.findById.mockRejectedValue(new Error('Database error'))
+      vi.mocked(container.userService.findById).mockRejectedValue(
+        new Error('Database error')
+      )
 
       await getUser(
         mockRequest as AuthenticatedRequest,
@@ -182,8 +204,10 @@ describe('UserController', () => {
 
   describe('updateUser', () => {
     it('should update user successfully', async () => {
-      mockUserService.findById.mockResolvedValue({ id: 'user-123' })
-      mockUserService.update.mockResolvedValue([1])
+      vi.mocked(container.userService.findById).mockResolvedValue({
+        id: 'user-123',
+      } as any)
+      vi.mocked(container.userService.update).mockResolvedValue([1])
 
       mockRequest.body = {
         firstName: 'Updated',
@@ -195,8 +219,8 @@ describe('UserController', () => {
         mockResponse as Response
       )
 
-      expect(mockUserService.findById).toHaveBeenCalledWith('user-123')
-      expect(mockUserService.update).toHaveBeenCalledWith('user-123', {
+      expect(container.userService.findById).toHaveBeenCalledWith('user-123')
+      expect(container.userService.update).toHaveBeenCalledWith('user-123', {
         firstName: 'Updated',
         lastName: 'Name',
       })
@@ -206,7 +230,7 @@ describe('UserController', () => {
     })
 
     it('should return 404 when user not found', async () => {
-      mockUserService.findById.mockResolvedValue(null)
+      vi.mocked(container.userService.findById).mockResolvedValue(null)
 
       await updateUser(
         mockRequest as AuthenticatedRequest,
@@ -220,7 +244,9 @@ describe('UserController', () => {
     })
 
     it('should handle errors', async () => {
-      mockUserService.findById.mockRejectedValue(new Error('Database error'))
+      vi.mocked(container.userService.findById).mockRejectedValue(
+        new Error('Database error')
+      )
 
       await updateUser(
         mockRequest as AuthenticatedRequest,
@@ -237,14 +263,14 @@ describe('UserController', () => {
   describe('deleteUser', () => {
     it('should delete user successfully', async () => {
       mockRequest.params = { id: 'user-123' }
-      mockUserService.delete.mockResolvedValue(1)
+      vi.mocked(container.userService.delete).mockResolvedValue(1)
 
       await deleteUser(
         mockRequest as AuthenticatedRequest,
         mockResponse as Response
       )
 
-      expect(mockUserService.delete).toHaveBeenCalledWith('user-123')
+      expect(container.userService.delete).toHaveBeenCalledWith('user-123')
       expect(mockResponse.json).toHaveBeenCalledWith({
         message: 'User deleted successfully',
       })
@@ -252,7 +278,7 @@ describe('UserController', () => {
 
     it('should return 404 when user not found', async () => {
       mockRequest.params = { id: 'nonexistent' }
-      mockUserService.delete.mockResolvedValue(0)
+      vi.mocked(container.userService.delete).mockResolvedValue(0)
 
       await deleteUser(
         mockRequest as AuthenticatedRequest,
@@ -267,7 +293,9 @@ describe('UserController', () => {
 
     it('should handle errors', async () => {
       mockRequest.params = { id: 'user-123' }
-      mockUserService.delete.mockRejectedValue(new Error('Database error'))
+      vi.mocked(container.userService.delete).mockRejectedValue(
+        new Error('Database error')
+      )
 
       await deleteUser(
         mockRequest as AuthenticatedRequest,
