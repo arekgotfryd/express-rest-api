@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('custom-env').env(process.env.NODE_ENV || 'development')
 
 module.exports = {
   development: {

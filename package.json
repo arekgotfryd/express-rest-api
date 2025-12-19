@@ -13,6 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "type-check": "tsc",
+    "lint": "eslint .",
     "db:migrate": "sequelize db:migrate",
     "db:migrate:undo": "sequelize db:migrate:undo",
     "db:seed": "node src/db/seed.ts"
@@ -30,7 +32,6 @@
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "custom-env": "^2.0.6",
-    "dotenv": "^16.3.1",
     "express": "^5.1.0",
     "helmet": "^7.1.0",
     "jose": "^6.0.12",
@@ -39,11 +40,11 @@
     "sequelize": "^6.37.7",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "ts-node": "^10.9.2",
     "winston": "^3.19.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
@@ -55,10 +56,13 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@vitest/coverage-v8": "^3.2.4",
     "cross-env": "^10.0.0",
+    "eslint": "^9.39.2",
+    "globals": "^16.5.0",
     "sequelize-cli": "^6.6.2",
     "supertest": "^6.3.4",
     "tsx": "^4.20.4",
     "typescript": "^5.9.2",
+    "typescript-eslint": "^8.50.0",
     "vitest": "^3.2.4"
   }
 }
