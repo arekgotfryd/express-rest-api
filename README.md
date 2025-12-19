@@ -127,4 +127,6 @@ The final repository must include:
 
 ---
 
+## How to run it with docker
+`docker compose up`
 

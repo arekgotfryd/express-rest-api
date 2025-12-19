@@ -4,7 +4,7 @@ import { z } from 'zod'
 process.env.APP_STAGE = process.env.APP_STAGE || 'dev'
 
 const isProduction = process.env.APP_STAGE === 'production'
-const isDevelopment = process.env.APP_STAGE === 'dev'
+const isDevelopment = process.env.APP_STAGE === 'dev' 
 const isTest = process.env.APP_STAGE === 'test'
 
 // Load .env file
@@ -21,7 +21,7 @@ const envSchema = z.object({
     .enum(['development', 'production', 'test'])
     .default('development'),
 
-  APP_STAGE: z.enum(['dev', 'production', 'test']).default('dev'),
+  APP_STAGE: z.enum(['local', 'dev', 'production', 'test']).default('local'),
 
   // Server
   PORT: z.coerce.number().positive().default(3000),
