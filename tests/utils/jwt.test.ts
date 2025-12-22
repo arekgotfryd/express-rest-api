@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { jwtVerify, SignJWT } from 'jose'
 import { generateToken, verifyToken } from '../../src/utils/jwt.ts'
+import { env } from '../../env.ts'
 
 vi.mock('jose', () => ({
   SignJWT: vi.fn(),
@@ -69,8 +70,8 @@ describe('JWT Utils', () => {
     })
 
     it('should throw error if JWT_SECRET is not set', async () => {
-      const originalSecret = process.env.JWT_SECRET
-      delete process.env.JWT_SECRET
+      const originalSecret = env.JWT_SECRET
+      delete env.JWT_SECRET
 
       const payload = {
         id: 'user-123',
@@ -81,7 +82,7 @@ describe('JWT Utils', () => {
         'JWT_SECRET environment variable is not set'
       )
 
-      process.env.JWT_SECRET = originalSecret
+      env.JWT_SECRET = originalSecret
     })
   })
 

@@ -3,13 +3,14 @@ import bcrypt from 'bcrypt'
 import { generateToken } from '../utils/jwt.ts'
 import { User, Organization } from '../models/index.ts'
 import { logger } from '../utils/logger.ts'
+import { env } from '../../env.ts'
 
 export const register = async (req: Request, res: Response) => {
   try {
     const { email, password, firstName, lastName, organizationName } = req.body
 
     // Hash password
-    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12')
+    const saltRounds = env.BCRYPT_SALT_ROUNDS || 12
     const hashedPassword = await bcrypt.hash(password, saltRounds)
 
     const organization = await Organization.findOne({
