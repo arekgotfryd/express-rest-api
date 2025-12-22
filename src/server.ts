@@ -1,4 +1,4 @@
-import { env, isDev, isTestEnv } from '../env.ts'
+import { env, isTestEnv } from '../env.ts'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
@@ -11,6 +11,7 @@ import swaggerUi from 'swagger-ui-express'
 import { swaggerSpec } from './config/swagger.ts'
 import logger from './utils/logger.ts'
 import morgan from 'morgan'
+import { errorHandler } from './middleware/errorHandler.ts'
 
 const app = express()
 
@@ -52,20 +53,7 @@ app.use((req, res) => {
 })
 
 // Global error handler
-app.use(
-  (
-    err: Error,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    logger.error(err.stack)
-    res.status(500).json({
-      error: 'Something went wrong!',
-      ...(isDev() && { details: err.message }),
-    })
-  }
-)
+app.use(errorHandler)
 
 export { app }
 
