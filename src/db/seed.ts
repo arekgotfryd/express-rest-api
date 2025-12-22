@@ -3,7 +3,7 @@ import { User, Order, Organization } from '../models/index.ts'
 import { hashPassword } from '../utils/password.ts'
 
 async function seed() {
-  console.log('🌱 Starting database seed...')
+  console.log('Starting database seed...')
 
   try {
     // Optionally sync models (uncomment if you want Sequelize to manage tables)
@@ -116,8 +116,8 @@ async function seed() {
     })
 
     // Sanity check
-    console.log('✅ Database seeded successfully!')
-    console.log('\n📊 Seed Summary:')
+    console.log('Database seeded successfully!')
+    console.log('\nSeed Summary:')
     console.log('- 2  demo orgs created')
     console.log('- 10 demo users created')
     console.log('- 20 demo orders created')
@@ -131,13 +131,13 @@ async function seed() {
         0
       )}`
     )
-    console.log('\n🔑 Login Credentials:')
+    console.log('\nLogin Credentials:')
     console.log('email: user1@corpa.com')
     console.log('Password: demo1234')
     console.log('\nEmail: user1@corpb.com')
     console.log('Password: demo1234')
   } catch (error) {
-    console.error('❌ Seed failed:', error)
+    console.error('Seed failed:', error)
     throw error
   }
 }

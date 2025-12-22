@@ -126,7 +126,69 @@ The final repository must include:
 - A short note on key design decisions (ORM, error handling, caching, etc.)
 
 ---
+## How to run the app locally
+
+1.  **Prerequisites**: Ensure you have Node.js (v23+) and MySQL 8 installed.
+2.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+3.  **Environment Setup**:
+    Copy `.env.example` to `.env` and update the database credentials.
+    ```bash
+    cp .env.example .env
+    ```
+4.  **Database Setup**:
+    Run migrations and seed data:
+    ```bash
+    npm run db:migrate
+    npm run db:seed
+    ```
+5.  **Start the Server**:
+    ```bash
+    npm run dev
+    ```
 
 ## How to run it with docker
-`docker compose up`
+
+Run the following command to start the application and the database:
+
+```bash
+docker compose up
+```
+
+To rebuild the image (e.g. after installing new dependencies):
+
+```bash
+docker compose up --build
+```
+
+## How to access the Swagger UI
+
+Once the application is running, you can access the interactive API documentation at:
+
+[http://localhost:3000/swagger](http://localhost:3000/swagger)
+
+## How to run the test suite
+
+To run the unit tests:
+
+```bash
+npm test
+```
+
+To run tests with coverage report:
+
+```bash
+npm run test:coverage
+```
+
+## Key decisions
+
+*   **Architecture**: Implemented a layered architecture (Controllers, Services, Data Access) with **Dependency Injection** to ensure separation of concerns and testability.
+*   **Validation**: Used **Zod** for strict runtime request validation and environment variable verification.
+*   **Database**: Chosen **Sequelize** as the ORM for its easy integration with MySQL.
+*   **Error Handling**: Centralized error handling middleware that captures exceptions and returns structured JSON responses, ensuring no sensitive stack traces leak in production.
+*   **Testing**: Utilized **Vitest** for a fast, modern testing experience.
+*   **Docker**: Configured a multi-environment Docker setup (`docker-compose.yml` vs `docker-compose.local.yml`) to support both production-like execution and local development with hot-reloading.
 
