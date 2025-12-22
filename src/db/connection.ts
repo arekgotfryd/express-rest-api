@@ -10,6 +10,12 @@ const createSequelize = () => {
   return new Sequelize(env.DATABASE_URL, {
     dialect: 'mysql',
     logging: shouldLog ? logger.info.bind(logger) : false,
+    pool: {
+      max: env.DATABASE_POOL_MAX,
+      min: env.DATABASE_POOL_MIN,
+      acquire: 30000,
+      idle: 10000,
+    },
   })
 }
 
