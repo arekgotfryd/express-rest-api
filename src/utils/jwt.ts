@@ -5,7 +5,7 @@ import env from '../../env.ts'
 export interface JwtPayload {
   id: string
   email: string
-  organizationId?: string
+  organizationId: string
   [key: string]: unknown
 }
 
@@ -27,10 +27,11 @@ export const generateToken = async (payload: JwtPayload): Promise<string> => {
 export const verifyToken = async (token: string): Promise<JwtPayload> => {
   const secretKey = createSecretKey(env.JWT_SECRET, 'utf-8')
   const { payload } = await jwtVerify(token, secretKey)
+  console.log('Verified JWT payload:', payload)
 
   return {
     id: payload.id as string,
     email: payload.email as string,
-    organizationId: payload.organizationId as string | undefined,
+    organizationId: payload.organizationId as string,
   }
 }

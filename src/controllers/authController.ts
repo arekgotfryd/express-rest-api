@@ -76,6 +76,7 @@ export const login = async (req: Request, res: Response) => {
     const token = await generateToken({
       id: user.id,
       email: user.email,
+      organizationId: user.organizationId,
     })
 
     res.json({

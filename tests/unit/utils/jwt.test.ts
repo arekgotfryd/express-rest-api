@@ -22,6 +22,7 @@ describe('JWT Utils', () => {
       const payload = {
         id: 'user-123',
         email: 'test@example.com',
+        organizationId: 'org-123',
       }
 
       const mockToken = 'generated.jwt.token'
@@ -76,6 +77,7 @@ describe('JWT Utils', () => {
       const payload = {
         id: 'user-123',
         email: 'test@example.com',
+        organizationId: 'org-123',
       }
 
       await expect(generateToken(payload)).rejects.toThrow(

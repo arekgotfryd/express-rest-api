@@ -42,7 +42,7 @@ export const getUser = async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user!.id
 
     const user = await container.userService.findById(userId, {
-      attributes: ['id', 'email', 'username', 'firstName', 'lastName'],
+      attributes: ['id', 'email', 'firstName', 'lastName'],
     })
 
     if (!user) {

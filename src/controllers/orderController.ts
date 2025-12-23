@@ -74,13 +74,13 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
     const { totalAmount } = req.body
     const userId = req.user!.id
     const organizationId = req.user!.organizationId
-    await container.orderService.create({
+    const order = await container.orderService.create({
       userId,
       organizationId,
       totalAmount,
     })
 
-    res.status(201).json({ message: 'Order has been created' })
+    res.status(201).json({ order })
   } catch (error) {
     logger.error('Order create error:', error)
     res.status(500).json({ error: 'Failed to create order' })

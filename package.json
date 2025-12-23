@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "node --watch src/index.ts",
     "start": "node src/index.ts",
-    "test": "vitest run",
+    "test": "vitest run tests/unit",
+    "test:e2e": "vitest run tests/e2e",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "type-check": "tsc",

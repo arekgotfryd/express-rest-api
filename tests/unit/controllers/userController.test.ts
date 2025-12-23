@@ -160,7 +160,7 @@ describe('UserController', () => {
       )
 
       expect(container.userService.findById).toHaveBeenCalledWith('user-123', {
-        attributes: ['id', 'email', 'username', 'firstName', 'lastName'],
+        attributes: ['id', 'email', 'firstName', 'lastName'],
       })
       expect(mockResponse.json).toHaveBeenCalledWith({ user: mockUser })
     })

@@ -81,9 +81,7 @@ describe('Order Controller', () => {
 
       expect(container.orderService.create).toHaveBeenCalledWith(orderData)
       expect(mockResponse.status).toHaveBeenCalledWith(201)
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        message: 'Order has been created',
-      })
+      expect(mockResponse.json).toHaveBeenCalledWith({ order: createdOrder })
     })
 
     it('should handle creation errors', async () => {
