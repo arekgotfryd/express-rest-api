@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Response } from 'express'
-import type { AuthenticatedRequest } from '../../src/middleware/auth.ts'
+import type { AuthenticatedRequest } from '../../../src/middleware/auth.ts'
 
-vi.mock('../../src/container.ts', () => ({
+vi.mock('../../../src/container.ts', () => ({
   container: {
     organizationService: {
       create: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock('../../src/container.ts', () => ({
   },
 }))
 
-vi.mock('../../src/utils/logger.ts', () => {
+vi.mock('../../../src/utils/logger.ts', () => {
   const mockLogger = {
     info: vi.fn(),
     error: vi.fn(),
@@ -34,9 +34,9 @@ const {
   getOrganizations,
   updateOrganization,
   deleteOrganization,
-} = await import('../../src/controllers/organizationController.ts')
+} = await import('../../../src/controllers/organizationController.ts')
 
-const { container } = await import('../../src/container.ts')
+const { container } = await import('../../../src/container.ts')
 
 describe('Organization Controller', () => {
   let mockRequest: Partial<AuthenticatedRequest>

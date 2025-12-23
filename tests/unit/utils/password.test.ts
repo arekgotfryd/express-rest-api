@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import bcrypt from 'bcrypt'
-import { hashPassword, comparePassword } from '../../src/utils/password.ts'
+import { hashPassword, comparePassword } from '../../../src/utils/password.ts'
 
 vi.mock('bcrypt', () => ({
   default: {

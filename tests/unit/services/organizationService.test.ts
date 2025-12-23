@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { OrganizationService } from '../../src/services/organizationService.ts'
-import { Organization } from '../../src/models/index.ts'
+import { OrganizationService } from '../../../src/services/organizationService.ts'
+import { Organization } from '../../../src/models/index.ts'
 
-vi.mock('../../src/models/index.ts', () => ({
+vi.mock('../../../src/models/index.ts', () => ({
   Organization: {
     create: vi.fn(),
     findByPk: vi.fn(),

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { OrderService } from '../../src/services/orderService.ts'
-import { Order } from '../../src/models/index.ts'
+import { OrderService } from '../../../src/services/orderService.ts'
+import { Order } from '../../../src/models/index.ts'
 
-vi.mock('../../src/models/index.ts', () => ({
+vi.mock('../../../src/models/index.ts', () => ({
   Order: {
     create: vi.fn(),
     findByPk: vi.fn(),

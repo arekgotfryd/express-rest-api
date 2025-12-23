@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Response, NextFunction } from 'express'
-import type { AuthenticatedRequest } from '../../src/middleware/auth.ts'
-import { authenticateToken } from '../../src/middleware/auth.ts'
-import { verifyToken } from '../../src/utils/jwt.ts'
+import type { AuthenticatedRequest } from '../../../src/middleware/auth.ts'
+import { authenticateToken } from '../../../src/middleware/auth.ts'
+import { verifyToken } from '../../../src/utils/jwt.ts'
 
-vi.mock('../../src/utils/jwt.ts', () => ({
+vi.mock('../../../src/utils/jwt.ts', () => ({
   verifyToken: vi.fn(),
 }))
 

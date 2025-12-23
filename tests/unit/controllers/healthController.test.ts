@@ -1,16 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Request, Response } from 'express'
-import { health, readiness } from '../../src/controllers/healthController.ts'
-import { sequelize } from '../../src/db/connection.ts'
-import { logger } from '../../src/utils/logger.ts'
+import { health, readiness } from '../../../src/controllers/healthController.ts'
+import { sequelize } from '../../../src/db/connection.ts'
 
-vi.mock('../../src/db/connection.ts', () => ({
+vi.mock('../../../src/db/connection.ts', () => ({
   sequelize: {
     authenticate: vi.fn(),
   },
 }))
 
-vi.mock('../../src/utils/logger.ts', () => {
+vi.mock('../../../src/utils/logger.ts', () => {
   const mockLogger = {
     info: vi.fn(),
     error: vi.fn(),

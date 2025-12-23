@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { jwtVerify, SignJWT } from 'jose'
-import { generateToken, verifyToken } from '../../src/utils/jwt.ts'
-import { env } from '../../env.ts'
+import { generateToken, verifyToken } from '../../../src/utils/jwt.ts'
+import { env } from '../../../env.ts'
 
 vi.mock('jose', () => ({
   SignJWT: vi.fn(),

@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { UserService } from '../../src/services/userService.ts'
-import { User } from '../../src/models/index.ts'
+import { UserService } from '../../../src/services/userService.ts'
+import { User } from '../../../src/models/index.ts'
 
 // Mock the User model
-vi.mock('../../src/models/index.ts', () => ({
+vi.mock('../../../src/models/index.ts', () => ({
   User: {
     create: vi.fn(),
     findByPk: vi.fn(),

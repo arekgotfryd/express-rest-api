@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import bcrypt from 'bcrypt'
-import { register, login } from '../../src/controllers/authController.ts'
-import { User, Organization } from '../../src/models/index.ts'
-import { generateToken } from '../../src/utils/jwt.ts'
+import { register, login } from '../../../src/controllers/authController.ts'
+import { User, Organization } from '../../../src/models/index.ts'
+import { generateToken } from '../../../src/utils/jwt.ts'
 
-vi.mock('../../src/models/index.ts', () => ({
+vi.mock('../../../src/models/index.ts', () => ({
   User: {
     create: vi.fn(),
     findOne: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock('../../src/models/index.ts', () => ({
   },
 }))
 
-vi.mock('../../src/utils/jwt.ts', () => ({
+vi.mock('../../../src/utils/jwt.ts', () => ({
   generateToken: vi.fn(),
 }))
 
@@ -25,7 +25,7 @@ vi.mock('bcrypt', () => ({
   },
 }))
 
-vi.mock('../../src/utils/logger.ts', () => ({
+vi.mock('../../../src/utils/logger.ts', () => ({
   logger: {
     error: vi.fn(),
   },

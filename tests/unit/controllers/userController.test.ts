@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { Response } from 'express'
-import type { AuthenticatedRequest } from '../../src/middleware/auth.ts'
-import { container } from '../../src/container.ts'
-import type { User } from '../../src/models/user.ts'
+import type { AuthenticatedRequest } from '../../../src/middleware/auth.ts'
+import { container } from '../../../src/container.ts'
+import type { User } from '../../../src/models/user.ts'
 
-vi.mock('../../src/container.ts', () => ({
+vi.mock('../../../src/container.ts', () => ({
   container: {
     userService: {
       findAll: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock('../../src/container.ts', () => ({
   },
 }))
 
-vi.mock('../../src/utils/logger.ts', () => {
+vi.mock('../../../src/utils/logger.ts', () => {
   const mockLogger = {
     error: vi.fn(),
     info: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock('../../src/utils/logger.ts', () => {
 
 // Import after mocking
 const { getUsers, getUser, updateUser, deleteUser } = await import(
-  '../../src/controllers/userController.ts'
+  '../../../src/controllers/userController.ts'
 )
 
 describe('UserController', () => {

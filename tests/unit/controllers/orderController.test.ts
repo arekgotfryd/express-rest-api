@@ -1,11 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Response } from 'express'
-import type { AuthenticatedRequest } from '../../src/middleware/auth.ts'
-import { container } from '../../src/container.ts'
+import type { AuthenticatedRequest } from '../../../src/middleware/auth.ts'
+import { container } from '../../../src/container.ts'
 
-// const mockOrderService =
-
-vi.mock('../../src/container.ts', () => ({
+vi.mock('../../../src/container.ts', () => ({
   container: {
     orderService: {
       create: vi.fn(),
@@ -18,7 +16,7 @@ vi.mock('../../src/container.ts', () => ({
     },
   },
 }))
-vi.mock('../../src/utils/logger.ts', () => {
+vi.mock('../../../src/utils/logger.ts', () => {
   const mockLogger = {
     error: vi.fn(),
     info: vi.fn(),
@@ -31,7 +29,7 @@ vi.mock('../../src/utils/logger.ts', () => {
 
 // Import after mocking
 const { createOrder, deleteOrder, getOrder, updateOrder } = await import(
-  '../../src/controllers/orderController.ts'
+  '../../../src/controllers/orderController.ts'
 )
 
 describe('Order Controller', () => {
