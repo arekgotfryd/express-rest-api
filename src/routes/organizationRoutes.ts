@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { authenticateToken } from '../middleware/auth.ts'
+import { cacheControl } from '../middleware/cache.ts'
 import { validateBody } from '../middleware/validation.ts'
 import {
   createOrganization,
@@ -56,7 +57,7 @@ router.use(authenticateToken)
  *       500:
  *         description: Server error
  */
-router.get('/', getOrganizations)
+router.get('/', cacheControl(600), getOrganizations)
 
 /**
  * @swagger
@@ -91,7 +92,7 @@ router.get('/', getOrganizations)
  *       500:
  *         description: Server error
  */
-router.get('/:id', getOrganization)
+router.get('/:id', cacheControl(600), getOrganization)
 
 /**
  * @swagger

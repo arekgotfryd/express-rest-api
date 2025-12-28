@@ -43,7 +43,7 @@ describe('E2E API Tests', () => {
   })
 
   describe('Users API', () => {
-    it('should get all users (paginated)', async () => {
+    it('should get all users (paginated) with Cache-Control header', async () => {
       const res = await request(app)
         .get('/api/users')
         .set('Authorization', `Bearer ${authToken}`)
@@ -55,6 +55,7 @@ describe('E2E API Tests', () => {
       expect(res.body.pagination.totalCount).toBe(10)
       expect(res.body.pagination.hasNextPage).toBe(false)
       expect(res.body.pagination.hasPreviousPage).toBe(false)
+      expect(res.headers['cache-control']).toBe('private, max-age=600')
     })
 
     it('should get current user details', async () => {
@@ -69,7 +70,7 @@ describe('E2E API Tests', () => {
   })
 
   describe('Organizations API', () => {
-    it('should get all organizations', async () => {
+    it('should get all organizations with Cache-Control header', async () => {
       const res = await request(app)
         .get('/api/organizations')
         .set('Authorization', `Bearer ${authToken}`)
@@ -79,6 +80,7 @@ describe('E2E API Tests', () => {
       expect(res.body.organizations.length).toBe(2)
       organizationId = res.body.organizations[0].id
       expect(res.body.pagination.totalCount).toBe(2)
+      expect(res.headers['cache-control']).toBe('private, max-age=600')
     })
 
     it('should get user organization details', async () => {
@@ -93,6 +95,7 @@ describe('E2E API Tests', () => {
 
   describe('Orders API', () => {
     let createdOrderId: string
+    let ordersEtag: string
 
     it('should get all orders', async () => {
       const res = await request(app)
@@ -110,6 +113,28 @@ describe('E2E API Tests', () => {
       expect(res.body.pagination.totalCount).toBe(20)
     })
 
+    it('should return ETag header for orders list', async () => {
+      const res = await request(app)
+        .get('/api/orders')
+        .set('Authorization', `Bearer ${authToken}`)
+
+      expect(res.status).toBe(200)
+      expect(res.headers['etag']).toBeDefined()
+      expect(res.headers['etag']).toMatch(/^"[a-f0-9]{32}"$/)
+      expect(res.headers['cache-control']).toBe('private, no-cache')
+      ordersEtag = res.headers['etag']
+    })
+
+    it('should return 304 Not Modified when ETag matches for orders list', async () => {
+      const res = await request(app)
+        .get('/api/orders')
+        .set('Authorization', `Bearer ${authToken}`)
+        .set('If-None-Match', ordersEtag)
+
+      expect(res.status).toBe(304)
+      expect(res.body).toEqual({}) // No body on 304
+    })
+
     it('should create a new order', async () => {
       const newOrder = {
         totalAmount: 150,
@@ -124,6 +149,17 @@ describe('E2E API Tests', () => {
       expect(res.body).toHaveProperty('order')
       expect(res.body.order.totalAmount).toBe(150)
       createdOrderId = res.body.order.id
+    })
+
+    it('should return different ETag after order is created', async () => {
+      const res = await request(app)
+        .get('/api/orders')
+        .set('Authorization', `Bearer ${authToken}`)
+
+      expect(res.status).toBe(200)
+      expect(res.headers['etag']).toBeDefined()
+      // ETag should be different now since data changed
+      expect(res.headers['etag']).not.toBe(ordersEtag)
     })
 
     it('should delete the created order', async () => {

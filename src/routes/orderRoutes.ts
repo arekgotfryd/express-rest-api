@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { authenticateToken } from '../middleware/auth.ts'
+import { etag } from '../middleware/cache.ts'
 import { validateBody } from '../middleware/validation.ts'
 import {
   createOrder,
@@ -55,7 +56,7 @@ router.use(authenticateToken)
  *       500:
  *         description: Server error
  */
-router.get('/', getOrders)
+router.get('/', etag(), getOrders)
 
 /**
  * @swagger
@@ -90,7 +91,7 @@ router.get('/', getOrders)
  *       500:
  *         description: Server error
  */
-router.get('/:id', getOrder)
+router.get('/:id', etag(), getOrder)
 
 /**
  * @swagger

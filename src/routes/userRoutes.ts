@@ -6,6 +6,7 @@ import {
   deleteUser,
 } from '../controllers/userController.ts'
 import { authenticateToken } from '../middleware/auth.ts'
+import { cacheControl } from '../middleware/cache.ts'
 import { validateBody } from '../middleware/validation.ts'
 import { updateUserSchema } from '../validation/user.ts'
 
@@ -54,7 +55,7 @@ router.use(authenticateToken)
  *       500:
  *         description: Server error
  */
-router.get('/', getUsers)
+router.get('/', cacheControl(600), getUsers)
 
 /**
  * @swagger
@@ -89,7 +90,7 @@ router.get('/', getUsers)
  *       500:
  *         description: Server error
  */
-router.get('/:id', getUser)
+router.get('/:id', cacheControl(600), getUser)
 
 /**
  * @swagger

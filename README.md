@@ -134,7 +134,7 @@ The final repository must include:
     npm install
     ```
 3.  **Environment Setup**:
-    Copy `.env.example` to `.env` and update the database credentials.
+    Copy `.env.example` to `.env` and update database credentials.
     ```bash
     cp .env.example .env
     ```
