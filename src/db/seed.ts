@@ -32,7 +32,7 @@ async function seed() {
     console.log('Creating demo users corp A...')
     const usersCorpA = await Promise.all(
       Array.from({ length: 5 }, (_, i) => i + 1).map(async (n) => {
-        const hashedPassword = await hashPassword('demo1234')
+        const hashedPassword = await hashPassword('Demo1234!')
         return User.create({
           email: `user${n}@corpa.com`,
           password: hashedPassword,
@@ -46,7 +46,7 @@ async function seed() {
     console.log('Creating demo users corp B...')
     const usersCorpB = await Promise.all(
       Array.from({ length: 5 }, (_, i) => i + 6).map(async (n) => {
-        const hashedPassword = await hashPassword('demo1234')
+        const hashedPassword = await hashPassword('Demo1234!')
         return User.create({
           email: `user${n}@corpb.com`,
           password: hashedPassword,
@@ -133,9 +133,9 @@ async function seed() {
     )
     console.log('\nLogin Credentials:')
     console.log('email: user1@corpa.com')
-    console.log('Password: demo1234')
+    console.log('Password: Demo1234!')
     console.log('\nEmail: user1@corpb.com')
-    console.log('Password: demo1234')
+    console.log('Password: Demo1234!')
   } catch (error) {
     console.error('Seed failed:', error)
     throw error

@@ -1,7 +1,7 @@
 import { Router } from 'express'
-import { register, login } from '../controllers/authController.ts'
+import { register, login, refreshToken } from '../controllers/authController.ts'
 import { validateBody } from '../middleware/validation.ts'
-import { loginSchema, registerUserSchema } from '../validation/auth.ts'
+import { loginSchema, registerUserSchema, refreshTokenSchema } from '../validation/auth.ts'
 
 const router = Router()
 
@@ -93,5 +93,39 @@ router.post('/register', validateBody(registerUserSchema), register)
  *         description: Server error
  */
 router.post('/login', validateBody(loginSchema), login)
+
+/**
+ * @swagger
+ * /api/auth/refresh:
+ *   post:
+ *     summary: Refresh access token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Tokens refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ *       401:
+ *         description: Invalid or expired refresh token
+ */
+router.post('/refresh', validateBody(refreshTokenSchema), refreshToken)
 
 export default router

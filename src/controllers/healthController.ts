@@ -1,5 +1,6 @@
 import { sequelize } from '../db/connection.ts'
 import { logger } from '../utils/logger.ts'
+import { getCacheStats } from '../middleware/serverCache.ts'
 
 export const health = async (req, res) => {
   try {
@@ -25,9 +26,9 @@ export const readiness = async (req, res) => {
     await sequelize.authenticate()
     checks.database = true
 
-    // TODO: Add cache check when cache is implemented
-    // For now, mark as true if no cache service is configured
-    checks.cache = true
+    // Check server cache
+    const cacheStats = getCacheStats()
+    checks.cache = cacheStats.maxSize > 0
 
     const allChecksPass = Object.values(checks).every((check) => check === true)
 

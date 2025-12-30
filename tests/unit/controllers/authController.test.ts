@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import bcrypt from 'bcrypt'
 import { register, login } from '../../../src/controllers/authController.ts'
 import { User, Organization } from '../../../src/models/index.ts'
-import { generateToken } from '../../../src/utils/jwt.ts'
+import { generateToken, generateRefreshToken } from '../../../src/utils/jwt.ts'
+import { hashPassword, comparePassword } from '../../../src/utils/password.ts'
 
 vi.mock('../../../src/models/index.ts', () => ({
   User: {
@@ -16,13 +16,12 @@ vi.mock('../../../src/models/index.ts', () => ({
 
 vi.mock('../../../src/utils/jwt.ts', () => ({
   generateToken: vi.fn(),
+  generateRefreshToken: vi.fn(),
 }))
 
-vi.mock('bcrypt', () => ({
-  default: {
-    hash: vi.fn(),
-    compare: vi.fn(),
-  },
+vi.mock('../../../src/utils/password.ts', () => ({
+  hashPassword: vi.fn(),
+  comparePassword: vi.fn(),
 }))
 
 vi.mock('../../../src/utils/logger.ts', () => ({
@@ -69,16 +68,17 @@ describe('AuthController', () => {
       }
 
       vi.mocked(Organization.findOne).mockResolvedValue(mockOrg as any)
-      vi.mocked(bcrypt.hash).mockResolvedValue('hashedpassword' as any)
+      vi.mocked(hashPassword).mockResolvedValue('hashedpassword')
       vi.mocked(User.create).mockResolvedValue(mockUser as any)
       vi.mocked(generateToken).mockResolvedValue('token123')
+      vi.mocked(generateRefreshToken).mockResolvedValue('refreshtoken123')
 
       await register(mockRequest, mockResponse)
 
       expect(Organization.findOne).toHaveBeenCalledWith({
         where: { name: 'Test Corp' },
       })
-      expect(bcrypt.hash).toHaveBeenCalledWith('password123', 12)
+      expect(hashPassword).toHaveBeenCalledWith('password123')
       expect(User.create).toHaveBeenCalledWith({
         email: userData.email,
         password: 'hashedpassword',
@@ -94,6 +94,7 @@ describe('AuthController', () => {
           email: userData.email,
         }),
         token: 'token123',
+        refreshToken: 'refreshtoken123',
       })
     })
 
@@ -152,15 +153,16 @@ describe('AuthController', () => {
       }
 
       vi.mocked(User.findOne).mockResolvedValue(mockUser as any)
-      vi.mocked(bcrypt.compare).mockResolvedValue(true as any)
+      vi.mocked(comparePassword).mockResolvedValue(true)
       vi.mocked(generateToken).mockResolvedValue('token123')
+      vi.mocked(generateRefreshToken).mockResolvedValue('refreshtoken123')
 
       await login(mockRequest, mockResponse)
 
       expect(User.findOne).toHaveBeenCalledWith({
         where: { email: credentials.email },
       })
-      expect(bcrypt.compare).toHaveBeenCalledWith(
+      expect(comparePassword).toHaveBeenCalledWith(
         credentials.password,
         mockUser.password
       )
@@ -171,6 +173,7 @@ describe('AuthController', () => {
           email: credentials.email,
         }),
         token: 'token123',
+        refreshToken: 'refreshtoken123',
       })
     })
 
@@ -203,7 +206,7 @@ describe('AuthController', () => {
       }
 
       vi.mocked(User.findOne).mockResolvedValue(mockUser as any)
-      vi.mocked(bcrypt.compare).mockResolvedValue(false as any)
+      vi.mocked(comparePassword).mockResolvedValue(false)
 
       await login(mockRequest, mockResponse)
 

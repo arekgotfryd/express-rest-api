@@ -9,7 +9,7 @@ describe('E2E API Tests', () => {
 
   const testUser = {
     email: 'user1@corpa.com',
-    password: 'demo1234',
+    password: 'Demo1234!',
   }
 
   describe('Health Check', () => {

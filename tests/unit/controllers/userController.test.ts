@@ -272,8 +272,8 @@ describe('UserController', () => {
   })
 
   describe('deleteUser', () => {
-    it('should delete user successfully', async () => {
-      mockRequest.params = { id: 'user-123' }
+    it('should delete user successfully when deleting own account', async () => {
+      mockRequest.params = { id: 'user-123' } // Same as mockRequest.user.id
       vi.mocked(container.userService.delete).mockResolvedValue(1)
 
       await deleteUser(
@@ -287,8 +287,23 @@ describe('UserController', () => {
       })
     })
 
+    it('should return 403 when trying to delete another user', async () => {
+      mockRequest.params = { id: 'other-user-456' } // Different from mockRequest.user.id
+
+      await deleteUser(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(mockResponse.status).toHaveBeenCalledWith(403)
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'You can only delete your own account',
+      })
+      expect(container.userService.delete).not.toHaveBeenCalled()
+    })
+
     it('should return 404 when user not found', async () => {
-      mockRequest.params = { id: 'nonexistent' }
+      mockRequest.params = { id: 'user-123' } // Same as mockRequest.user.id
       vi.mocked(container.userService.delete).mockResolvedValue(0)
 
       await deleteUser(
@@ -303,7 +318,7 @@ describe('UserController', () => {
     })
 
     it('should handle errors', async () => {
-      mockRequest.params = { id: 'user-123' }
+      mockRequest.params = { id: 'user-123' } // Same as mockRequest.user.id
       vi.mocked(container.userService.delete).mockRejectedValue(
         new Error('Database error')
       )
