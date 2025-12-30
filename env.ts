@@ -57,6 +57,10 @@ const envSchema = z.object({
   LOG_LEVEL: z
     .enum(['error', 'warn', 'info', 'debug'])
     .default(isProduction ? 'info' : 'debug'),
+
+  // Rate Limiting
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().positive().default(60 * 1000), // 1 minute
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().positive().default(30),
 })
 
 // Type for the validated environment

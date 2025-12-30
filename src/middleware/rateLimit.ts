@@ -1,14 +1,16 @@
 import rateLimit from 'express-rate-limit'
 import type { Request, Response } from 'express'
 import type { AuthenticatedRequest } from './auth.ts'
+import { env } from '../../env.ts'
 
 /**
  * Rate limiter for API endpoints
- * Limits requests per organization to 30 per minute
+ * Limits requests per organization based on env configuration
+ * Defaults: 30 requests per 60 seconds
  */
 export const organizationRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute window
-  max: 30, // 30 requests per window per organization
+  windowMs: env.RATE_LIMIT_WINDOW_MS,
+  max: env.RATE_LIMIT_MAX_REQUESTS,
   standardHeaders: true, // Return rate limit info in headers
   legacyHeaders: false, // Disable X-RateLimit-* headers
   
@@ -25,7 +27,7 @@ export const organizationRateLimiter = rateLimit({
     res.status(429).json({
       error: 'Too many requests',
       message: 'Rate limit exceeded. Please try again later.',
-      retryAfter: 60, // seconds
+      retryAfter: Math.ceil(env.RATE_LIMIT_WINDOW_MS / 1000), // seconds
     })
   },
 
