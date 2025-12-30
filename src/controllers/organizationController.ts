@@ -2,10 +2,20 @@ import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.ts'
 import { container } from '../container.ts'
 import { logger } from '../utils/logger.ts'
+import { toOrganizationDTO, toOrganizationDTOList, toPaginationDTO } from '../dtos/mappers.ts'
+import type {
+  OrganizationsResponseDTO,
+  OrganizationResponseDTO,
+  MessageDTO,
+  ErrorDTO,
+} from '../dtos/index.ts'
 
 const attributes = ['id', 'name', 'industry', 'dateFounded']
 
-export const getOrganizations = async (req: AuthenticatedRequest, res: Response) => {
+export const getOrganizations = async (
+  req: AuthenticatedRequest,
+  res: Response<OrganizationsResponseDTO | ErrorDTO>
+) => {
   try {
     const page = parseInt(req.query.page as string) || 1
     const limit = parseInt(req.query.limit as string) || 10
@@ -21,15 +31,8 @@ export const getOrganizations = async (req: AuthenticatedRequest, res: Response)
     })
 
     res.json({
-      organizations,
-      pagination: {
-        page,
-        limit,
-        totalCount,
-        totalPages: Math.ceil(totalCount / limit),
-        hasNextPage: page < Math.ceil(totalCount / limit),
-        hasPreviousPage: page > 1,
-      },
+      organizations: toOrganizationDTOList(organizations),
+      pagination: toPaginationDTO(page, limit, totalCount),
     })
   } catch (error) {
     logger.error('Get all organizations error', error)
@@ -37,7 +40,10 @@ export const getOrganizations = async (req: AuthenticatedRequest, res: Response)
   }
 }
 
-export const getOrganization = async (req: AuthenticatedRequest, res: Response) => {
+export const getOrganization = async (
+  req: AuthenticatedRequest,
+  res: Response<OrganizationResponseDTO | ErrorDTO>
+) => {
   try {
     const organizationId = req.params.id
 
@@ -52,14 +58,17 @@ export const getOrganization = async (req: AuthenticatedRequest, res: Response) 
       return res.status(404).json({ error: 'Organization not found' })
     }
 
-    res.json({ organization })
+    res.json({ organization: toOrganizationDTO(organization) })
   } catch (error) {
     logger.error('Get organization error:', error)
     res.status(500).json({ error: 'Failed to fetch organization' })
   }
 }
 
-export const createOrganization = async (req: AuthenticatedRequest, res: Response) => {
+export const createOrganization = async (
+  req: AuthenticatedRequest,
+  res: Response<MessageDTO | ErrorDTO>
+) => {
   try {
     const { name, industry, dateFounded } = req.body
     await container.organizationService.create({
@@ -75,7 +84,10 @@ export const createOrganization = async (req: AuthenticatedRequest, res: Respons
   }
 }
 
-export const updateOrganization = async (req: AuthenticatedRequest, res: Response) => {
+export const updateOrganization = async (
+  req: AuthenticatedRequest,
+  res: Response<MessageDTO | ErrorDTO>
+) => {
   try {
     const organizationId = req.params.id
     const { name, industry, dateFounded } = req.body
@@ -102,7 +114,10 @@ export const updateOrganization = async (req: AuthenticatedRequest, res: Respons
   }
 }
 
-export const deleteOrganization = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteOrganization = async (
+  req: AuthenticatedRequest,
+  res: Response<MessageDTO | ErrorDTO>
+) => {
   try {
     const deletedCount = await container.organizationService.delete(req.params.id)
 

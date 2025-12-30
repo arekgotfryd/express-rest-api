@@ -7,6 +7,7 @@ import {
 } from '../controllers/userController.ts'
 import { authenticateToken } from '../middleware/auth.ts'
 import { cacheControl } from '../middleware/cache.ts'
+import { serverCache, invalidateCacheMiddleware } from '../middleware/serverCache.ts'
 import { validateBody } from '../middleware/validation.ts'
 import { updateUserSchema } from '../validation/user.ts'
 
@@ -55,7 +56,7 @@ router.use(authenticateToken)
  *       500:
  *         description: Server error
  */
-router.get('/', cacheControl(600), getUsers)
+router.get('/', cacheControl(600), serverCache(), getUsers)
 
 /**
  * @swagger
@@ -90,7 +91,7 @@ router.get('/', cacheControl(600), getUsers)
  *       500:
  *         description: Server error
  */
-router.get('/:id', cacheControl(600), getUser)
+router.get('/:id', cacheControl(600), serverCache(), getUser)
 
 /**
  * @swagger
@@ -132,7 +133,7 @@ router.get('/:id', cacheControl(600), getUser)
  *       500:
  *         description: Server error
  */
-router.put('/:id', validateBody(updateUserSchema), updateUser)
+router.put('/:id', validateBody(updateUserSchema), invalidateCacheMiddleware('users'), updateUser)
 
 /**
  * @swagger
@@ -160,6 +161,6 @@ router.put('/:id', validateBody(updateUserSchema), updateUser)
  *       500:
  *         description: Server error
  */
-router.delete('/:id', deleteUser)
+router.delete('/:id', invalidateCacheMiddleware('users'), deleteUser)
 
 export default router

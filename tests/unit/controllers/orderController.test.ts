@@ -71,6 +71,14 @@ describe('Order Controller', () => {
         updatedAt: new Date(),
       }
 
+      // Expected DTO format (without timestamps)
+      const expectedOrder = {
+        id: 'order-123',
+        userId: 'user-123',
+        organizationId: 'org-123',
+        totalAmount: 100.5,
+      }
+
       mockRequest.body = orderData
       vi.mocked(container.orderService.create).mockResolvedValue(createdOrder as any)
 
@@ -81,7 +89,7 @@ describe('Order Controller', () => {
 
       expect(container.orderService.create).toHaveBeenCalledWith(orderData)
       expect(mockResponse.status).toHaveBeenCalledWith(201)
-      expect(mockResponse.json).toHaveBeenCalledWith({ order: createdOrder })
+      expect(mockResponse.json).toHaveBeenCalledWith({ order: expectedOrder })
     })
 
     it('should handle creation errors', async () => {

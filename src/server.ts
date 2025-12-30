@@ -12,6 +12,7 @@ import { swaggerSpec } from './config/swagger.ts'
 import logger from './utils/logger.ts'
 import morgan from 'morgan'
 import { errorHandler } from './middleware/errorHandler.ts'
+import { organizationRateLimiter } from './middleware/rateLimit.ts'
 
 const app = express()
 
@@ -38,11 +39,11 @@ app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 // Health and readiness routes
 app.use('/', healthRoutes)
 
-// Routes
+// Routes with rate limiting
 app.use('/api/auth', authRoutes)
-app.use('/api/users', userRoutes)
-app.use('/api/orders', orderRoutes)
-app.use('/api/organizations', organizationRoutes)
+app.use('/api/users', organizationRateLimiter, userRoutes)
+app.use('/api/orders', organizationRateLimiter, orderRoutes)
+app.use('/api/organizations', organizationRateLimiter, organizationRoutes)
 
 // 404 handler
 app.use((req, res) => {

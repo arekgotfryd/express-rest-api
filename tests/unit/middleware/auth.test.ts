@@ -91,7 +91,7 @@ describe('Auth Middleware', () => {
 
     it('should handle lowercase bearer token', async () => {
       const token = 'valid.jwt.token'
-      const decoded = { id: 'user-123', email: 'test@example.com' }
+      const decoded = { id: 'user-123', email: 'test@example.com', organizationId: 'org-123' }
 
       mockRequest.headers = {
         authorization: `bearer ${token}`,

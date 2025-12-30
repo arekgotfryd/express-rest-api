@@ -132,7 +132,7 @@ describe('E2E API Tests', () => {
         .set('If-None-Match', ordersEtag)
 
       expect(res.status).toBe(304)
-      expect(res.body).toEqual({}) // No body on 304
+      expect(res.body).toEqual("") // No body on 304
     })
 
     it('should create a new order', async () => {

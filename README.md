@@ -160,7 +160,7 @@ docker compose up
 To rebuild the image (e.g. after installing new dependencies):
 
 ```bash
-docker compose up --build
+docker compose down && docker compose build --no-cache && docker compose up
 ```
 
 ## How to access the Swagger UI

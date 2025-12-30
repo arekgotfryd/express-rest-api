@@ -4,8 +4,13 @@ import { generateToken } from '../utils/jwt.ts'
 import { User, Organization } from '../models/index.ts'
 import { logger } from '../utils/logger.ts'
 import { env } from '../../env.ts'
+import { toUserDTO } from '../dtos/mappers.ts'
+import type { AuthResponseDTO, ErrorDTO } from '../dtos/index.ts'
 
-export const register = async (req: Request, res: Response) => {
+export const register = async (
+  req: Request,
+  res: Response<AuthResponseDTO | ErrorDTO>
+) => {
   try {
     const { email, password, firstName, lastName, organizationName } = req.body
 
@@ -29,23 +34,16 @@ export const register = async (req: Request, res: Response) => {
       organizationId: organization.id,
     })
 
-    const newUser = {
-      id: created.id,
-      email: created.email,
-      firstName: created.firstName ?? undefined,
-      lastName: created.lastName ?? undefined,
-    }
-
     // Generate JWT
     const token = await generateToken({
-      id: newUser.id,
-      email: newUser.email,
+      id: created.id,
+      email: created.email,
       organizationId: organization.id,
     })
 
     res.status(201).json({
       message: 'User created successfully',
-      user: newUser,
+      user: toUserDTO(created),
       token,
     })
   } catch (error) {
@@ -54,7 +52,10 @@ export const register = async (req: Request, res: Response) => {
   }
 }
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (
+  req: Request,
+  res: Response<AuthResponseDTO | ErrorDTO>
+) => {
   try {
     const { email, password } = req.body
 
@@ -81,12 +82,7 @@ export const login = async (req: Request, res: Response) => {
 
     res.json({
       message: 'Login successful',
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName ?? undefined,
-        lastName: user.lastName ?? undefined,
-      },
+      user: toUserDTO(user),
       token,
     })
   } catch (error) {

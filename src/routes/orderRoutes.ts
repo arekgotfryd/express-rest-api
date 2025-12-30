@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { authenticateToken } from '../middleware/auth.ts'
 import { etag } from '../middleware/cache.ts'
+import { serverCache, invalidateCacheMiddleware } from '../middleware/serverCache.ts'
 import { validateBody } from '../middleware/validation.ts'
 import {
   createOrder,
@@ -56,7 +57,7 @@ router.use(authenticateToken)
  *       500:
  *         description: Server error
  */
-router.get('/', etag(), getOrders)
+router.get('/', etag(), serverCache(), getOrders)
 
 /**
  * @swagger
@@ -91,7 +92,7 @@ router.get('/', etag(), getOrders)
  *       500:
  *         description: Server error
  */
-router.get('/:id', etag(), getOrder)
+router.get('/:id', etag(), serverCache(), getOrder)
 
 /**
  * @swagger
@@ -121,7 +122,7 @@ router.get('/:id', etag(), getOrder)
  *       500:
  *         description: Server error
  */
-router.post('/', validateBody(orderSchema), createOrder)
+router.post('/', validateBody(orderSchema), invalidateCacheMiddleware('orders'), createOrder)
 
 /**
  * @swagger
@@ -164,7 +165,7 @@ router.post('/', validateBody(orderSchema), createOrder)
  *       500:
  *         description: Server error
  */
-router.put('/:id', validateBody(orderSchema), updateOrder)
+router.put('/:id', validateBody(orderSchema), invalidateCacheMiddleware('orders'), updateOrder)
 
 /**
  * @swagger
@@ -192,6 +193,6 @@ router.put('/:id', validateBody(orderSchema), updateOrder)
  *       500:
  *         description: Server error
  */
-router.delete('/:id', deleteOrder)
+router.delete('/:id', invalidateCacheMiddleware('orders'), deleteOrder)
 
 export default router

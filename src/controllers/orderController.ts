@@ -3,10 +3,21 @@ import type { AuthenticatedRequest } from '../middleware/auth.ts'
 import { container } from '../container.ts'
 import type { Order } from '../models/order.ts'
 import { logger } from '../utils/logger.ts'
+import { toOrderDTO, toOrderDTOList, toOrderWithRelationsDTO, toPaginationDTO } from '../dtos/mappers.ts'
+import type {
+  OrdersResponseDTO,
+  OrderResponseDTO,
+  OrderWithRelationsResponseDTO,
+  MessageDTO,
+  ErrorDTO,
+} from '../dtos/index.ts'
 
 const attributes = ['id', 'userId', 'organizationId', 'totalAmount']
 
-export const getOrders = async (req: AuthenticatedRequest, res: Response) => {
+export const getOrders = async (
+  req: AuthenticatedRequest,
+  res: Response<OrdersResponseDTO | ErrorDTO>
+) => {
   try {
     // Pagination parameters
     const page = parseInt(req.query.page as string) || 1
@@ -24,15 +35,8 @@ export const getOrders = async (req: AuthenticatedRequest, res: Response) => {
     })
 
     res.json({
-      orders,
-      pagination: {
-        page,
-        limit,
-        totalCount,
-        totalPages: Math.ceil(totalCount / limit),
-        hasNextPage: page < Math.ceil(totalCount / limit),
-        hasPreviousPage: page > 1,
-      },
+      orders: toOrderDTOList(orders),
+      pagination: toPaginationDTO(page, limit, totalCount),
     })
   } catch (error) {
     logger.error('Get all orders error', error)
@@ -40,7 +44,10 @@ export const getOrders = async (req: AuthenticatedRequest, res: Response) => {
   }
 }
 
-export const getOrder = async (req: AuthenticatedRequest, res: Response) => {
+export const getOrder = async (
+  req: AuthenticatedRequest,
+  res: Response<OrderWithRelationsResponseDTO | ErrorDTO>
+) => {
   try {
     const orderId = req.params.id
 
@@ -62,14 +69,17 @@ export const getOrder = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(404).json({ error: 'Order not found' })
     }
 
-    res.json({ order })
+    res.json({ order: toOrderWithRelationsDTO(order) })
   } catch (error) {
     logger.error('Get order error:', error)
     res.status(500).json({ error: 'Failed to fetch order' })
   }
 }
 
-export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
+export const createOrder = async (
+  req: AuthenticatedRequest,
+  res: Response<OrderResponseDTO | ErrorDTO>
+) => {
   try {
     const { totalAmount } = req.body
     const userId = req.user!.id
@@ -80,14 +90,17 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response) => {
       totalAmount,
     })
 
-    res.status(201).json({ order })
+    res.status(201).json({ order: toOrderDTO(order) })
   } catch (error) {
     logger.error('Order create error:', error)
     res.status(500).json({ error: 'Failed to create order' })
   }
 }
 
-export const updateOrder = async (req: AuthenticatedRequest, res: Response) => {
+export const updateOrder = async (
+  req: AuthenticatedRequest,
+  res: Response<MessageDTO | ErrorDTO>
+) => {
   try {
     const orderId = req.params.id
     const { userId, organizationId, totalAmount } = req.body
@@ -111,7 +124,10 @@ export const updateOrder = async (req: AuthenticatedRequest, res: Response) => {
   }
 }
 
-export const deleteOrder = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteOrder = async (
+  req: AuthenticatedRequest,
+  res: Response<MessageDTO | ErrorDTO>
+) => {
   try {
     const deletedCount = await container.orderService.delete(req.params.id)
 

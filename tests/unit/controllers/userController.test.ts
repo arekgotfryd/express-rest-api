@@ -75,6 +75,9 @@ describe('UserController', () => {
         },
       ]
 
+      // Expected DTO format (without organizationId)
+      const expectedUsers = mockUsers.map(({ organizationId: _orgId, ...rest }) => rest)
+
       vi.mocked(container.userService.count).mockResolvedValue(20)
       vi.mocked(container.userService.findAll).mockResolvedValue(
         mockUsers as User[]
@@ -95,7 +98,7 @@ describe('UserController', () => {
       })
 
       expect(mockResponse.json).toHaveBeenCalledWith({
-        users: mockUsers,
+        users: expectedUsers,
         pagination: {
           page: 1,
           limit: 10,
@@ -150,6 +153,14 @@ describe('UserController', () => {
         organizationId: 'org-123',
       }
 
+      // Expected DTO format (without organizationId)
+      const expectedUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
+      }
+
       vi.mocked(container.userService.findById).mockResolvedValue(
         mockUser as User
       )
@@ -162,7 +173,7 @@ describe('UserController', () => {
       expect(container.userService.findById).toHaveBeenCalledWith('user-123', {
         attributes: ['id', 'email', 'firstName', 'lastName'],
       })
-      expect(mockResponse.json).toHaveBeenCalledWith({ user: mockUser })
+      expect(mockResponse.json).toHaveBeenCalledWith({ user: expectedUser })
     })
 
     it('should return 404 when user not found', async () => {

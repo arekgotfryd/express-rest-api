@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import env from '../../env.ts'
 import { logger } from '../utils/logger.ts'
 
@@ -8,7 +8,7 @@ export interface CustomError extends Error {
   errors?: Array<{ message: string }>
 }
 
-export const errorHandler = (err: CustomError, req: Request, res: Response) => {
+export const errorHandler = (err: CustomError, req: Request, res: Response, _next: NextFunction) => {
   logger.error(err.stack)
 
   // Default error
