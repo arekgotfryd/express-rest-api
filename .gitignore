@@ -97,12 +97,6 @@ temp/
 *.tmp
 *.temp
 
-# Package manager files
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-shrinkwrap.yaml
-
 # Optional npm cache directory
 .npm/
 

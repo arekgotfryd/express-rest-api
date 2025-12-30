@@ -1,11 +1,18 @@
-import { env, isDev, isTestEnv } from '../env.ts'
+import { env, isTestEnv } from '../env.ts'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import authRoutes from './routes/authRoutes.ts'
-import habitRoutes from './routes/habitRoutes.ts'
 import userRoutes from './routes/userRoutes.ts'
+import orderRoutes from './routes/orderRoutes.ts'
+import organizationRoutes from './routes/organizationRoutes.ts'
+import healthRoutes from './routes/healthRoutes.ts'
+import swaggerUi from 'swagger-ui-express'
+import { swaggerSpec } from './config/swagger.ts'
+import logger from './utils/logger.ts'
 import morgan from 'morgan'
+import { errorHandler } from './middleware/errorHandler.ts'
+import { organizationRateLimiter } from './middleware/rateLimit.ts'
 
 const app = express()
 
@@ -20,23 +27,23 @@ app.use(
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(
-  morgan('dev', {
-    skip: () => isTestEnv(),
+  morgan('combined', {
+    stream: { write: (msg) => logger.info(msg.trim()) },
+    skip: () => isTestEnv() || env.LOG_LEVEL !== 'debug',
   })
 )
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    service: 'Habit Tracker API',
-  })
-})
 
-// Routes
+// Swagger documentation
+app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
+
+// Health and readiness routes
+app.use('/', healthRoutes)
+
+// Routes with rate limiting
 app.use('/api/auth', authRoutes)
-app.use('/api/habits', habitRoutes)
-app.use('/api/users', userRoutes)
+app.use('/api/users', organizationRateLimiter, userRoutes)
+app.use('/api/orders', organizationRateLimiter, orderRoutes)
+app.use('/api/organizations', organizationRateLimiter, organizationRoutes)
 
 // 404 handler
 app.use((req, res) => {
@@ -47,20 +54,7 @@ app.use((req, res) => {
 })
 
 // Global error handler
-app.use(
-  (
-    err: Error,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    console.error(err.stack)
-    res.status(500).json({
-      error: 'Something went wrong!',
-      ...(isDev() && { details: err.message }),
-    })
-  }
-)
+app.use(errorHandler)
 
 export { app }
 

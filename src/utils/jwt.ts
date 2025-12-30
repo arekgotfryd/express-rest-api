@@ -1,15 +1,16 @@
-import { SignJWT, jwtVerify, decodeJwt } from 'jose'
+import { SignJWT, jwtVerify } from 'jose'
 import { createSecretKey } from 'crypto'
 import env from '../../env.ts'
 
 export interface JwtPayload {
   id: string
   email: string
-  username: string
+  organizationId: string
+  [key: string]: unknown
 }
 
 export const generateToken = async (payload: JwtPayload): Promise<string> => {
-  const secret = process.env.JWT_SECRET
+  const secret = env.JWT_SECRET
   if (!secret) {
     throw new Error('JWT_SECRET environment variable is not set')
   }
@@ -26,10 +27,11 @@ export const generateToken = async (payload: JwtPayload): Promise<string> => {
 export const verifyToken = async (token: string): Promise<JwtPayload> => {
   const secretKey = createSecretKey(env.JWT_SECRET, 'utf-8')
   const { payload } = await jwtVerify(token, secretKey)
+  console.log('Verified JWT payload:', payload)
 
   return {
     id: payload.id as string,
     email: payload.email as string,
-    username: payload.username as string,
+    organizationId: payload.organizationId as string,
   }
 }

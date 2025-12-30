@@ -1,9 +1,9 @@
 import { sequelize } from './connection.ts'
-import { users as User, organizations as Organization, orders as Order } from './schema.ts'
+import { User, Order, Organization } from '../models/index.ts'
 import { hashPassword } from '../utils/password.ts'
 
 async function seed() {
-  console.log('🌱 Starting database seed...')
+  console.log('Starting database seed...')
 
   try {
     // Optionally sync models (uncomment if you want Sequelize to manage tables)
@@ -17,14 +17,22 @@ async function seed() {
 
     //Create organizations
     console.log('Creating organizations...')
-    const corpA = await Organization.create({ name: 'Corp A', industry: 'Finance', dateFounded: new Date('2000-01-01') })
-    const corpB = await Organization.create({ name: 'Corp B', industry: 'Technology', dateFounded: new Date('2010-01-01') })
+    const corpA = await Organization.create({
+      name: 'Corp A',
+      industry: 'Finance',
+      dateFounded: new Date('2000-01-01'),
+    })
+    const corpB = await Organization.create({
+      name: 'Corp B',
+      industry: 'Technology',
+      dateFounded: new Date('2010-01-01'),
+    })
 
     // Create demo users Corp A
     console.log('Creating demo users corp A...')
     const usersCorpA = await Promise.all(
       Array.from({ length: 5 }, (_, i) => i + 1).map(async (n) => {
-        const hashedPassword = await hashPassword('demo123')
+        const hashedPassword = await hashPassword('demo1234')
         return User.create({
           email: `user${n}@corpa.com`,
           password: hashedPassword,
@@ -38,7 +46,7 @@ async function seed() {
     console.log('Creating demo users corp B...')
     const usersCorpB = await Promise.all(
       Array.from({ length: 5 }, (_, i) => i + 6).map(async (n) => {
-        const hashedPassword = await hashPassword('demo123')
+        const hashedPassword = await hashPassword('demo1234')
         return User.create({
           email: `user${n}@corpb.com`,
           password: hashedPassword,
@@ -87,7 +95,6 @@ async function seed() {
       ],
     })
 
-
     // Query all organizations with their users and orders
     const orgsWithUsersAndOrders = await Organization.findAll({
       include: [
@@ -108,23 +115,29 @@ async function seed() {
       ],
     })
 
-
     // Sanity check
-    console.log('✅ Database seeded successfully!')
-    console.log('\n📊 Seed Summary:')
+    console.log('Database seeded successfully!')
+    console.log('\nSeed Summary:')
     console.log('- 2  demo orgs created')
     console.log('- 10 demo users created')
     console.log('- 20 demo orders created')
     console.log(`- Demo user has ${userWithOrders?.orders?.length || 0} orders`)
-    console.log(`- Total organizations in system: ${orgsWithUsersAndOrders?.length || 0}`)
-    console.log(`- Total orders in system: ${orgsWithUsersAndOrders.reduce((acc, org) => acc + (org.orders?.length || 0), 0)}`)
-    console.log('\n🔑 Login Credentials:')
+    console.log(
+      `- Total organizations in system: ${orgsWithUsersAndOrders?.length || 0}`
+    )
+    console.log(
+      `- Total orders in system: ${orgsWithUsersAndOrders.reduce(
+        (acc, org) => acc + (org.orders?.length || 0),
+        0
+      )}`
+    )
+    console.log('\nLogin Credentials:')
     console.log('email: user1@corpa.com')
-    console.log('Password: demo123')
+    console.log('Password: demo1234')
     console.log('\nEmail: user1@corpb.com')
-    console.log('Password: demo123')
+    console.log('Password: demo1234')
   } catch (error) {
-    console.error('❌ Seed failed:', error)
+    console.error('Seed failed:', error)
     throw error
   }
 }

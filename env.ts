@@ -4,7 +4,7 @@ import { z } from 'zod'
 process.env.APP_STAGE = process.env.APP_STAGE || 'dev'
 
 const isProduction = process.env.APP_STAGE === 'production'
-const isDevelopment = process.env.APP_STAGE === 'dev'
+const isDevelopment = process.env.APP_STAGE === 'dev' 
 const isTest = process.env.APP_STAGE === 'test'
 
 // Load .env file
@@ -21,7 +21,7 @@ const envSchema = z.object({
     .enum(['development', 'production', 'test'])
     .default('development'),
 
-  APP_STAGE: z.enum(['dev', 'production', 'test']).default('dev'),
+  APP_STAGE: z.enum(['local', 'dev', 'production', 'test']).default('local'),
 
   // Server
   PORT: z.coerce.number().positive().default(3000),
@@ -39,7 +39,7 @@ const envSchema = z.object({
   REFRESH_TOKEN_EXPIRES_IN: z.string().default('30d'),
 
   // Security
-  BCRYPT_ROUNDS: z.coerce.number().min(10).max(20).default(12),
+  BCRYPT_SALT_ROUNDS: z.coerce.number().min(10).max(20).default(12),
 
   // CORS
   CORS_ORIGIN: z
@@ -55,8 +55,12 @@ const envSchema = z.object({
 
   // Logging
   LOG_LEVEL: z
-    .enum(['error', 'warn', 'info', 'debug', 'trace'])
+    .enum(['error', 'warn', 'info', 'debug'])
     .default(isProduction ? 'info' : 'debug'),
+
+  // Rate Limiting
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().positive().default(60 * 1000), // 1 minute
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().positive().default(30),
 })
 
 // Type for the validated environment

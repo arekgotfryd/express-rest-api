@@ -1,221 +1,194 @@
-# Habit Tracker API - Course Material
+# Server-node Exercise
 
-## Overview
-A comprehensive habit tracking API built with Node.js, Express, PostgreSQL, and Drizzle ORM. This project serves as teaching material for "API Design with Node.js v5" course.
+This exercise is designed to demonstrate and display proficiency in **Node.js** and **RESTful API design**.  
+The tasks range from straightforward to intermediate and potentially challenging features.
 
-## Tech Stack
-- **Runtime**: Node.js with TypeScript
-- **Framework**: Express.js
-- **Database**: PostgreSQL
-- **ORM**: Drizzle ORM
-- **Authentication**: JWT (JSON Web Tokens)
-- **Password Hashing**: bcrypt
-- **Testing**: Jest & Supertest
-- **Security**: Helmet & CORS
+---
 
-## Features
+## Requirements
 
-### Day 1 - Foundation
-- RESTful API design principles
-- Express routing and middleware
-- PostgreSQL setup with Drizzle ORM
-- CRUD operations for habits
-- Error handling middleware
-- Request validation with Zod
+### Domain Model
+The service must manage and persist a simple domain of three entities: **Users**, **Organizations**, and **Orders**.
 
-### Day 2 - Advanced Features
-- User authentication (register/login)
-- JWT-based authorization
-- Protected routes
-- Advanced endpoints:
-  - **POST /habits/:id/complete** - Mark habit as completed (with duplicate prevention)
-  - **GET /habits/:id/stats** - Get habit statistics (streaks, completion percentage)
-- Comprehensive testing suite
-- Deployment preparation
+- **User**: `id`, `firstName`, `lastName`, `email`, `organizationId`, `dateCreated`
+- **Organization**: `id`, `name`, `industry`, `dateFounded`
+- **Order**: `id`, `orderDate`, `totalAmount`, `userId`, `organizationId`
 
-## API Endpoints
+> The `userId` and `organizationId` values must reference valid records.
 
-### Authentication
-- `POST /api/auth/register` - Create new user account
-- `POST /api/auth/login` - Login and receive JWT token
+---
 
-### User Management
-- `GET /api/users/profile` - Get current user profile
-- `PUT /api/users/profile` - Update user profile
-- `PUT /api/users/password` - Change password
+### RESTful Endpoints
 
-### Habits (Protected Routes)
-- `GET /api/habits` - Get all user habits
-- `POST /api/habits` - Create new habit
-- `PUT /api/habits/:id` - Update habit
-- `DELETE /api/habits/:id` - Delete habit
-- `POST /api/habits/:id/complete` - Mark habit as completed today
-- `GET /api/habits/:id/stats` - Get habit statistics
+Each entity must support the following endpoints:
 
-## Data Models
+| Method | Route | Description |
+|--------|--------|-------------|
+| GET | `/api/[entity]` | Returns all items (paginated) |
+| GET | `/api/[entity]/{id}` | Returns a single item by ID |
+| POST | `/api/[entity]` | Creates a new item |
+| PUT | `/api/[entity]/{id}` | Updates an existing item |
+| DELETE | `/api/[entity]/{id}` | Deletes an item |
 
-### Users
-```typescript
-{
-  id: uuid (PK)
-  email: string (unique)
-  username: string (unique)
-  password: string (hashed)
-  firstName?: string
-  lastName?: string
-  createdAt: timestamp
-  updatedAt: timestamp
-}
-```
+#### Special endpoint
+- `GET /api/orders/{id}` — returns the order **along with** the associated user and organization.
 
-### Habits
-```typescript
-{
-  id: uuid (PK)
-  userId: uuid (FK -> users.id)
-  name: string
-  description?: string
-  frequency: 'daily' | 'weekly' | 'monthly'
-  targetCount: number (default: 1)
-  isActive: boolean (default: true)
-  createdAt: timestamp
-  updatedAt: timestamp
-}
-```
+---
 
-### Entries (Habit Completions)
-```typescript
-{
-  id: uuid (PK)
-  habitId: uuid (FK -> habits.id)
-  completion_date: timestamp
-  note?: string
-  createdAt: timestamp
-}
-```
+### Input Validation
 
-## Setup Instructions
+`POST` and `PUT` requests must be validated and respond with appropriate HTTP status codes.
 
-### Prerequisites
-- Node.js 18+
-- PostgreSQL 14+
-- npm or yarn
+| Rule | Description |
+|------|--------------|
+| User `firstName`, `lastName` | Must not be null or whitespace |
+| Organization `name` | Must not be null or whitespace |
+| Order `totalAmount` | Must be **greater than 0** |
+| All date fields | Must occur **before** the current timestamp |
 
-### Installation
+---
+
+### API Documentation and Health Checks
+
+- **Swagger/OpenAPI** must be available at: `GET /swagger`
+- Health probes:
+  - `GET /health` — liveness
+  - `GET /readiness` — readiness (check DB connection and cache readiness)
+
+---
+
+## Seed Data
+
+Provide a simple seed script that creates:
+- 2 organizations
+- 10 users
+- 20 orders (with valid past dates)
+
+This will help with testing pagination, relationships, and validation rules.
+
+
+---
+
+## Non-functional Requirements
+
+1. Tech Stack: Node.js, Typescript, Express, MySQL with Sequelize ORM
+2. Separate concerns between:
+   - Controllers
+   - Business logic (services)
+   - Data access (repositories)
+3. Domain entities **must not** be directly exposed in HTTP responses.  
+   Use DTOs or mapping functions.
+4. Logging:
+   - Database state changes → `info` level  
+   - HTTP headers → `debug` level
+5. Implement **unit tests** for business logic.
+6. Deploy the service via **Docker**, including dependencies
+7. Handle unhandled exceptions gracefully — return a structured JSON error message, not the developer exception page.
+
+---
+
+### Bonus Features
+1. **Client-side caching headers**
+   - User and Organization responses: cacheable for **10 minutes**
+   - Order responses: use **ETag** headers (`304 Not Modified` when valid)
+2. **Server-side caching**
+   - Cache GET responses in memory (e.g., using `lru-cache`)
+   - TTL: **10 minutes**
+   - Invalidate cached entries when related data changes
+3. **Rate limiting**
+   - Limit API access per organization to **30 requests per minute**
+4. **Authentication**
+   - Implement **JWT/OAuth2** authentication  
+   - All routes require authorization except `/health`, `/readiness`, and `/swagger`
+5. **Secure configuration**
+   - No hardcoded credentials in the source code (implement industry recognized security standards)
+
+---
+
+
+## Deliverables
+
+The final repository must include:
+
+- Complete source code
+- `README.md` (this file)
+- `docker-compose.yml`
+- `Dockerfile`
+- `.env.example`
+- Swagger documentation setup
+- Unit tests
+
+### The `README.md` must describe:
+- How to run the app locally
+- How to run it with Docker
+- How to access the Swagger UI
+- How to run the test suite
+- A short note on key design decisions (ORM, error handling, caching, etc.)
+
+---
+## How to run the app locally
+
+1.  **Prerequisites**: Ensure you have Node.js (v23+) and MySQL 8 installed.
+2.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+3.  **Environment Setup**:
+    Copy `.env.example` to `.env` and update database credentials.
+    ```bash
+    cp .env.example .env
+    ```
+4.  **Database Setup**:
+    Run migrations and seed data:
+    ```bash
+    npm run db:migrate
+    npm run db:seed
+    ```
+5.  **Start the Server**:
+    ```bash
+    npm run dev
+    ```
+
+## How to run it with docker
+
+Run the following command to start the application and the database:
+
 ```bash
-# Install dependencies
-npm install
-
-# Setup environment variables
-cp .env.example .env
-# Edit .env with your database credentials
-
-# Generate database migrations
-npm run db:generate
-
-# Run migrations
-npm run db:migrate
-
-# Start development server
-npm run dev
+docker compose up
 ```
 
-### Environment Variables
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/habit_tracker
-JWT_SECRET=your-secret-key-here
-NODE_ENV=development
-PORT=3000
-```
+To rebuild the image (e.g. after installing new dependencies):
 
-## Testing
 ```bash
-# Run all tests
+docker compose down && docker compose build --no-cache && docker compose up
+```
+
+## How to access the Swagger UI
+
+Once the application is running, you can access the interactive API documentation at:
+
+[http://localhost:3000/swagger](http://localhost:3000/swagger)
+
+## How to run the test suite
+
+To run the unit tests:
+
+```bash
 npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run specific test file
-npm test habits.test.ts
 ```
 
-## Key Features Explained
+To run tests with coverage report:
 
-### Habit Completion Logic
-- Users can only complete a habit once per day
-- Attempting duplicate completion returns 409 Conflict
-- Completions are tracked with timestamps for accurate streak calculation
+```bash
+npm run test:coverage
+```
 
-### Statistics Calculation
-- **Current Streak**: Consecutive days completed (must include today or yesterday)
-- **Longest Streak**: Maximum consecutive days ever achieved
-- **Total Completions**: Count of all completion entries
-- **Completion Percentage**: (Days completed / Days since creation) × 100
+## Key decisions
 
-### Security Features
-- Password hashing with bcrypt (10 rounds)
-- JWT tokens with expiration
-- Request validation with Zod schemas
-- SQL injection prevention via parameterized queries
-- XSS protection with Helmet
-- CORS configuration for cross-origin requests
+*   **Architecture**: Implemented a layered architecture (Controllers, Services, Data Access) with **Dependency Injection** to ensure separation of concerns and testability.
+*   **Validation**: Used **Zod** for strict runtime request validation and environment variable verification.
+*   **Database**: Chosen **Sequelize** as the ORM for its easy integration with MySQL.
+*   **Error Handling**: Centralized error handling middleware that captures exceptions and returns structured JSON responses, ensuring no sensitive stack traces leak in production.
+*   **Testing**: Utilized **Vitest** for a fast, modern testing experience.
+*   **Docker**: Configured a multi-environment Docker setup (`docker-compose.yml` vs `docker-compose.local.yml`) to support both production-like execution and local development with hot-reloading.
 
-## Course Structure
-
-### Day 1 Schedule
-- 9:30 AM - Welcome, Intro to APIs & REST Principles
-- 10:00 AM - Setting Up Node.js Project with Express
-- 10:45 AM - Express Basics: Routing & Request/Response
-- 11:30 AM - Middleware in Express
-- 1:00 PM - Setting up Postgres & Schema Design
-- 1:45 PM - Connecting Node.js to Postgres with Drizzle
-- 2:30 PM - Implementing CRUD Operations (Part 1)
-- 3:30 PM - Implementing CRUD Operations (Part 2)
-- 4:15 PM - Error Handling Basics & Q&A
-
-### Day 2 Schedule
-- 9:30 AM - Day 1 Recap & Day 2 Overview
-- 9:45 AM - Authentication Concepts: JWT Introduction
-- 10:30 AM - Implementing User Registration & Password Hashing
-- 11:30 AM - Implementing User Login & JWT Issuance
-- 1:00 PM - Protecting Routes with JWT Middleware
-- 2:00 PM - Introduction to API Testing with Jest & Supertest
-- 3:00 PM - Writing Integration Tests
-- 3:45 PM - Deployment Strategies & Considerations
-- 4:15 PM - Deploying the API & Final Q&A
-
-## Deployment Considerations
-- Use environment variables for sensitive data
-- Enable HTTPS in production
-- Set up database connection pooling
-- Configure rate limiting for public endpoints
-- Implement logging and monitoring
-- Use PM2 or similar for process management
-- Consider containerization with Docker
-
-## Common Issues & Solutions
-
-### Database Connection Issues
-- Ensure PostgreSQL is running
-- Check DATABASE_URL format
-- Verify database exists and user has permissions
-
-### Migration Errors
-- Run `npm run db:generate` before `npm run db:migrate`
-- Check for pending migrations with Drizzle Studio
-- Ensure database schema matches TypeScript types
-
-### Test Failures
-- Use separate test database
-- Clear test data between runs
-- Check for port conflicts (default: 3000)
-
-## Additional Resources
-- [Express.js Documentation](https://expressjs.com/)
-- [Drizzle ORM Documentation](https://orm.drizzle.team/)
-- [JWT.io](https://jwt.io/)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-
-## License
-This project is created for educational purposes as part of the API Design with Node.js v5 course.

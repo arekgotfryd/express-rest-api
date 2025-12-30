@@ -1,53 +1,61 @@
 import type { Request, Response } from 'express'
 import bcrypt from 'bcrypt'
 import { generateToken } from '../utils/jwt.ts'
-import { users as User } from '../db/schema.ts'
+import { User, Organization } from '../models/index.ts'
+import { logger } from '../utils/logger.ts'
+import { env } from '../../env.ts'
+import { toUserDTO } from '../dtos/mappers.ts'
+import type { AuthResponseDTO, ErrorDTO } from '../dtos/index.ts'
 
-export const register = async (req: Request, res: Response) => {
+export const register = async (
+  req: Request,
+  res: Response<AuthResponseDTO | ErrorDTO>
+) => {
   try {
-    const { email, username, password, firstName, lastName } = req.body
+    const { email, password, firstName, lastName, organizationName } = req.body
 
     // Hash password
-    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || '12')
+    const saltRounds = env.BCRYPT_SALT_ROUNDS || 12
     const hashedPassword = await bcrypt.hash(password, saltRounds)
+
+    const organization = await Organization.findOne({
+      where: { name: organizationName },
+    })
+    if (!organization) {
+      return res.status(400).json({ error: 'Organization does not exist' })
+    }
 
     // Create user via Sequelize
     const created = await User.create({
       email,
-      username,
       password: hashedPassword,
       firstName,
       lastName,
+      organizationId: organization.id,
     })
-
-    const newUser = {
-      id: created.id,
-      email: created.email,
-      username: created.username,
-      firstName: created.firstName ?? undefined,
-      lastName: created.lastName ?? undefined,
-      createdAt: created.createdAt,
-    }
 
     // Generate JWT
     const token = await generateToken({
-      id: newUser.id,
-      email: newUser.email,
-      username: newUser.username,
+      id: created.id,
+      email: created.email,
+      organizationId: organization.id,
     })
 
     res.status(201).json({
       message: 'User created successfully',
-      user: newUser,
+      user: toUserDTO(created),
       token,
     })
   } catch (error) {
-    console.error('Registration error:', error)
+    logger.error('Registration error:', error)
     res.status(500).json({ error: 'Failed to create user' })
   }
 }
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (
+  req: Request,
+  res: Response<AuthResponseDTO | ErrorDTO>
+) => {
   try {
     const { email, password } = req.body
 
@@ -69,22 +77,16 @@ export const login = async (req: Request, res: Response) => {
     const token = await generateToken({
       id: user.id,
       email: user.email,
-      username: user.username,
+      organizationId: user.organizationId,
     })
 
     res.json({
       message: 'Login successful',
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        firstName: user.firstName ?? undefined,
-        lastName: user.lastName ?? undefined,
-      },
+      user: toUserDTO(user),
       token,
     })
   } catch (error) {
-    console.error('Login error:', error)
+    logger.error('Login error:', error)
     res.status(500).json({ error: 'Failed to login' })
   }
 }

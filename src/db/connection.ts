@@ -1,11 +1,21 @@
 import { Sequelize } from 'sequelize'
 import { env, isProd } from '../../env.ts'
 import { remember } from '@epic-web/remember'
+import logger from '../utils/logger.ts'
 
 const createSequelize = () => {
+  // Enable logging based on LOG_LEVEL
+  const shouldLog = ['info', 'debug'].includes(env.LOG_LEVEL)
+
   return new Sequelize(env.DATABASE_URL, {
     dialect: 'mysql',
-    logging: false,
+    logging: shouldLog ? logger.info.bind(logger) : false,
+    pool: {
+      max: env.DATABASE_POOL_MAX,
+      min: env.DATABASE_POOL_MIN,
+      acquire: 30000,
+      idle: 10000,
+    },
   })
 }
 

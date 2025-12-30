@@ -3,17 +3,20 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     globals: true,
-    globalSetup: ['./tests/setup/globalSetup.ts'],
-    // Automatically clean up after each test to ensure isolation
+    environment: 'node',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'dist/',
+        '**/*.test.ts',
+        '**/*.config.ts',
+        'migrations/',
+      ],
+    },
     clearMocks: true,
+    mockReset: true,
     restoreMocks: true,
-    // Ensure tests run sequentially to avoid database conflicts
-    pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: true
-      }
-    }
   },
-  plugins: [],
 })
