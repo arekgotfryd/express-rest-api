@@ -100,4 +100,10 @@ export interface AuthResponseDTO {
   message: string
   user: UserDTO
   token: string
+  refreshToken: string
+}
+
+export interface RefreshTokenResponseDTO {
+  token: string
+  refreshToken: string
 }

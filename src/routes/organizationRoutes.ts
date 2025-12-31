@@ -2,9 +2,10 @@ import { Router } from 'express'
 import { authenticateToken } from '../middleware/auth.ts'
 import { cacheControl } from '../middleware/cache.ts'
 import { serverCache, invalidateCacheMiddleware } from '../middleware/serverCache.ts'
-import { validateBody } from '../middleware/validation.ts'
+import { validateBody, validateQuery } from '../middleware/validation.ts'
 import {
   createOrganization,
+  deleteOrganization,
   getOrganization,
   getOrganizations,
   updateOrganization,
@@ -12,6 +13,7 @@ import {
 import {
   organizationSchema,
 } from '../validation/organization.ts'
+import { paginationSchema } from '../validation/pagination.ts'
 
 const router = Router()
 
@@ -58,7 +60,7 @@ router.use(authenticateToken)
  *       500:
  *         description: Server error
  */
-router.get('/', cacheControl(600), serverCache(), getOrganizations)
+router.get('/', validateQuery(paginationSchema), cacheControl(600), serverCache(), getOrganizations)
 
 /**
  * @swagger
@@ -202,6 +204,6 @@ router.put('/:id', validateBody(organizationSchema), invalidateCacheMiddleware('
  *       500:
  *         description: Server error
  */
-router.delete('/:id', invalidateCacheMiddleware('organizations'), getOrganization)
+router.delete('/:id', invalidateCacheMiddleware('organizations'), deleteOrganization)
 
 export default router

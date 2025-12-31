@@ -87,7 +87,15 @@ export const deleteUser = async (
   res: Response<MessageDTO | ErrorDTO>
 ) => {
   try {
-    const deletedCount = await container.userService.delete(req.params.id)
+    const targetUserId = req.params.id
+    const currentUserId = req.user!.id
+
+    // Authorization: users can only delete their own account
+    if (targetUserId !== currentUserId) {
+      return res.status(403).json({ error: 'You can only delete your own account' })
+    }
+
+    const deletedCount = await container.userService.delete(targetUserId)
 
     if (deletedCount === 0) {
       return res.status(404).json({ error: 'User not found' })

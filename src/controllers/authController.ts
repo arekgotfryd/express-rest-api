@@ -1,11 +1,10 @@
 import type { Request, Response } from 'express'
-import bcrypt from 'bcrypt'
-import { generateToken } from '../utils/jwt.ts'
+import { generateToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.ts'
 import { User, Organization } from '../models/index.ts'
 import { logger } from '../utils/logger.ts'
-import { env } from '../../env.ts'
 import { toUserDTO } from '../dtos/mappers.ts'
-import type { AuthResponseDTO, ErrorDTO } from '../dtos/index.ts'
+import { hashPassword, comparePassword } from '../utils/password.ts'
+import type { AuthResponseDTO, RefreshTokenResponseDTO, ErrorDTO } from '../dtos/index.ts'
 
 export const register = async (
   req: Request,
@@ -15,8 +14,7 @@ export const register = async (
     const { email, password, firstName, lastName, organizationName } = req.body
 
     // Hash password
-    const saltRounds = env.BCRYPT_SALT_ROUNDS || 12
-    const hashedPassword = await bcrypt.hash(password, saltRounds)
+    const hashedPassword = await hashPassword(password)
 
     const organization = await Organization.findOne({
       where: { name: organizationName },
@@ -41,10 +39,18 @@ export const register = async (
       organizationId: organization.id,
     })
 
+    // Generate refresh token
+    const refreshToken = await generateRefreshToken({
+      id: created.id,
+      email: created.email,
+      organizationId: organization.id,
+    })
+
     res.status(201).json({
       message: 'User created successfully',
       user: toUserDTO(created),
       token,
+      refreshToken,
     })
   } catch (error) {
     logger.error('Registration error:', error)
@@ -67,7 +73,7 @@ export const login = async (
     }
 
     // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password)
+    const isValidPassword = await comparePassword(password, user.password)
 
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' })
@@ -80,13 +86,64 @@ export const login = async (
       organizationId: user.organizationId,
     })
 
+    // Generate refresh token
+    const refreshToken = await generateRefreshToken({
+      id: user.id,
+      email: user.email,
+      organizationId: user.organizationId,
+    })
+
     res.json({
       message: 'Login successful',
       user: toUserDTO(user),
       token,
+      refreshToken,
     })
   } catch (error) {
     logger.error('Login error:', error)
     res.status(500).json({ error: 'Failed to login' })
+  }
+}
+
+export const refreshToken = async (
+  req: Request,
+  res: Response<RefreshTokenResponseDTO | ErrorDTO>
+) => {
+  try {
+    const { refreshToken: token } = req.body
+
+    if (!token) {
+      return res.status(400).json({ error: 'Refresh token is required' })
+    }
+
+    // Verify the refresh token
+    const payload = await verifyRefreshToken(token)
+
+    // Verify user still exists
+    const user = await User.findByPk(payload.id)
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' })
+    }
+
+    // Generate new tokens
+    const newToken = await generateToken({
+      id: user.id,
+      email: user.email,
+      organizationId: user.organizationId,
+    })
+
+    const newRefreshToken = await generateRefreshToken({
+      id: user.id,
+      email: user.email,
+      organizationId: user.organizationId,
+    })
+
+    res.json({
+      token: newToken,
+      refreshToken: newRefreshToken,
+    })
+  } catch (error) {
+    logger.error('Refresh token error:', error)
+    res.status(401).json({ error: 'Invalid or expired refresh token' })
   }
 }

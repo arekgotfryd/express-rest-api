@@ -62,6 +62,135 @@ describe('Organization Controller', () => {
     vi.clearAllMocks()
   })
 
+  describe('getOrganizations', () => {
+    it('should return paginated organizations', async () => {
+      mockRequest.query = { page: '1', limit: '10' }
+
+      const organizations = [
+        { id: 'org-1', name: 'Org 1', industry: 'Tech', dateFounded: '2020-01-01' },
+        { id: 'org-2', name: 'Org 2', industry: 'Finance', dateFounded: '2019-01-01' },
+      ]
+
+      vi.mocked(container.organizationService.count).mockResolvedValue(25)
+      vi.mocked(container.organizationService.findAll).mockResolvedValue(organizations as any)
+
+      await getOrganizations(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(container.organizationService.count).toHaveBeenCalled()
+      expect(container.organizationService.findAll).toHaveBeenCalledWith(undefined, {
+        attributes: ['id', 'name', 'industry', 'dateFounded'],
+        limit: 10,
+        offset: 0,
+      })
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        organizations: organizations,
+        pagination: {
+          page: 1,
+          limit: 10,
+          totalCount: 25,
+          totalPages: 3,
+          hasNextPage: true,
+          hasPreviousPage: false,
+        },
+      })
+    })
+
+    it('should use default pagination when query params are missing', async () => {
+      mockRequest.query = {}
+
+      vi.mocked(container.organizationService.count).mockResolvedValue(5)
+      vi.mocked(container.organizationService.findAll).mockResolvedValue([])
+
+      await getOrganizations(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(container.organizationService.findAll).toHaveBeenCalledWith(undefined, {
+        attributes: ['id', 'name', 'industry', 'dateFounded'],
+        limit: 10,
+        offset: 0,
+      })
+    })
+
+    it('should handle getOrganizations errors', async () => {
+      mockRequest.query = {}
+
+      vi.mocked(container.organizationService.count).mockRejectedValue(
+        new Error('Database error')
+      )
+
+      await getOrganizations(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500)
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Failed to fetch organizations',
+      })
+    })
+  })
+
+  describe('getOrganization', () => {
+    it('should return an organization by id', async () => {
+      const organization = {
+        id: 'org-123',
+        name: 'Test Org',
+        industry: 'Tech',
+      }
+
+      mockRequest.params = { id: 'org-123' }
+      vi.mocked(container.organizationService.findById).mockResolvedValue(organization as any)
+
+      await getOrganization(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(container.organizationService.findById).toHaveBeenCalledWith(
+        'org-123',
+        expect.anything()
+      )
+      expect(mockResponse.json).toHaveBeenCalledWith({ organization })
+    })
+
+    it('should return 404 if organization not found', async () => {
+      mockRequest.params = { id: 'nonexistent' }
+      vi.mocked(container.organizationService.findById).mockResolvedValue(null)
+
+      await getOrganization(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(mockResponse.status).toHaveBeenCalledWith(404)
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Organization not found',
+      })
+    })
+
+    it('should handle getOrganization errors', async () => {
+      mockRequest.params = { id: 'org-123' }
+      vi.mocked(container.organizationService.findById).mockRejectedValue(
+        new Error('Database error')
+      )
+
+      await getOrganization(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500)
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Failed to fetch organization',
+      })
+    })
+  })
+
   describe('createOrganization', () => {
     it('should create an organization', async () => {
       const orgData = {
@@ -231,6 +360,43 @@ describe('Organization Controller', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(404)
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: 'Organization not found',
+      })
+    })
+
+    it('should handle delete errors', async () => {
+      mockRequest.params = { id: 'org-123' }
+      vi.mocked(container.organizationService.delete).mockRejectedValue(
+        new Error('Delete failed')
+      )
+
+      await deleteOrganization(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500)
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Failed to delete an organization',
+      })
+    })
+  })
+
+  describe('updateOrganization - error handling', () => {
+    it('should handle update errors', async () => {
+      mockRequest.params = { id: 'org-123' }
+      mockRequest.body = { name: 'Updated Org' }
+      vi.mocked(container.organizationService.update).mockRejectedValue(
+        new Error('Update failed')
+      )
+
+      await updateOrganization(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500)
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Failed to update organization',
       })
     })
   })

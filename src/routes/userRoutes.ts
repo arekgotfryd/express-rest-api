@@ -8,8 +8,9 @@ import {
 import { authenticateToken } from '../middleware/auth.ts'
 import { cacheControl } from '../middleware/cache.ts'
 import { serverCache, invalidateCacheMiddleware } from '../middleware/serverCache.ts'
-import { validateBody } from '../middleware/validation.ts'
+import { validateBody, validateQuery } from '../middleware/validation.ts'
 import { updateUserSchema } from '../validation/user.ts'
+import { paginationSchema } from '../validation/pagination.ts'
 
 const router = Router()
 
@@ -56,7 +57,7 @@ router.use(authenticateToken)
  *       500:
  *         description: Server error
  */
-router.get('/', cacheControl(600), serverCache(), getUsers)
+router.get('/', validateQuery(paginationSchema), cacheControl(600), serverCache(), getUsers)
 
 /**
  * @swagger

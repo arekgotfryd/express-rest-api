@@ -2,17 +2,9 @@ import { env as loadEnv } from 'custom-env'
 import { z } from 'zod'
 
 process.env.APP_STAGE = process.env.APP_STAGE || 'dev'
-
 const isProduction = process.env.APP_STAGE === 'production'
-const isDevelopment = process.env.APP_STAGE === 'dev' 
-const isTest = process.env.APP_STAGE === 'test'
-
-// Load .env file
-if (isDevelopment) {
-  loadEnv()
-} else if (isTest) {
-  loadEnv('test')
-}
+//load environment variables from .env file
+loadEnv()
 
 // Define the schema with environment-specific requirements
 const envSchema = z.object({
@@ -35,7 +27,7 @@ const envSchema = z.object({
   // JWT & Auth
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('7d'),
-  REFRESH_TOKEN_SECRET: z.string().min(32).optional(),
+  REFRESH_TOKEN_SECRET: z.string().min(32, 'REFRESH_TOKEN_SECRET must be at least 32 characters'),
   REFRESH_TOKEN_EXPIRES_IN: z.string().default('30d'),
 
   // Security

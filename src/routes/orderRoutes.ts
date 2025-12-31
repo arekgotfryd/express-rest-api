@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { authenticateToken } from '../middleware/auth.ts'
 import { etag } from '../middleware/cache.ts'
 import { serverCache, invalidateCacheMiddleware } from '../middleware/serverCache.ts'
-import { validateBody } from '../middleware/validation.ts'
+import { validateBody, validateQuery } from '../middleware/validation.ts'
 import {
   createOrder,
   deleteOrder,
@@ -11,6 +11,7 @@ import {
   updateOrder,
 } from '../controllers/orderController.ts'
 import { orderSchema } from '../validation/order.ts'
+import { paginationSchema } from '../validation/pagination.ts'
 
 const router = Router()
 
@@ -57,7 +58,7 @@ router.use(authenticateToken)
  *       500:
  *         description: Server error
  */
-router.get('/', etag(), serverCache(), getOrders)
+router.get('/', validateQuery(paginationSchema), etag(), serverCache(), getOrders)
 
 /**
  * @swagger
