@@ -183,6 +183,30 @@ To run tests with coverage report:
 npm run test:coverage
 ```
 
+## How to run E2E tests
+
+E2E tests require a running MySQL database. The easiest way is to use Docker:
+
+1.  **Start the database and application**:
+    ```bash
+    docker compose up -d
+    ```
+
+2. Run migration and db seeding
+   ```bash
+    npm run db:migrate
+    ```
+    ```bash
+    npm run db:seed
+    ```
+
+2.  **Run E2E tests**:
+    ```bash
+    npm run test:e2e
+    ```
+
+The E2E tests will run against the containerized application and database, testing the full request/response flow including authentication, CRUD operations, and pagination.
+
 ## Key decisions
 
 *   **Architecture**: Implemented a layered architecture (Controllers, Services, Data Access) with **Dependency Injection** to ensure separation of concerns and testability.
@@ -191,4 +215,6 @@ npm run test:coverage
 *   **Error Handling**: Centralized error handling middleware that captures exceptions and returns structured JSON responses, ensuring no sensitive stack traces leak in production.
 *   **Testing**: Utilized **Vitest** for a fast, modern testing experience.
 *   **Docker**: Configured a multi-environment Docker setup (`docker-compose.yml` vs `docker-compose.local.yml`) to support both production-like execution and local development with hot-reloading.
+
+
 
