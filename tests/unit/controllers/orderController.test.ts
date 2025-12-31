@@ -28,9 +28,8 @@ vi.mock('../../../src/utils/logger.ts', () => {
 })
 
 // Import after mocking
-const { createOrder, deleteOrder, getOrder, updateOrder } = await import(
-  '../../../src/controllers/orderController.ts'
-)
+const { createOrder, deleteOrder, getOrder, getOrders, updateOrder } =
+  await import('../../../src/controllers/orderController.ts')
 
 describe('Order Controller', () => {
   let mockRequest: Partial<AuthenticatedRequest>
@@ -54,6 +53,79 @@ describe('Order Controller', () => {
     }
 
     vi.clearAllMocks()
+  })
+
+  describe('getOrders', () => {
+    it('should return paginated orders', async () => {
+      mockRequest.query = { page: '1', limit: '10' }
+
+      const orders = [
+        { id: 'order-1', userId: 'user-1', organizationId: 'org-1', totalAmount: 100 },
+        { id: 'order-2', userId: 'user-2', organizationId: 'org-2', totalAmount: 200 },
+      ]
+
+      vi.mocked(container.orderService.count).mockResolvedValue(20)
+      vi.mocked(container.orderService.findAll).mockResolvedValue(orders as any)
+
+      await getOrders(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(container.orderService.count).toHaveBeenCalled()
+      expect(container.orderService.findAll).toHaveBeenCalledWith(undefined, {
+        attributes: ['id', 'userId', 'organizationId', 'totalAmount'],
+        limit: 10,
+        offset: 0,
+      })
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        orders: orders,
+        pagination: {
+          page: 1,
+          limit: 10,
+          totalCount: 20,
+          totalPages: 2,
+          hasNextPage: true,
+          hasPreviousPage: false,
+        },
+      })
+    })
+
+    it('should use default pagination when query params are missing', async () => {
+      mockRequest.query = {}
+
+      vi.mocked(container.orderService.count).mockResolvedValue(5)
+      vi.mocked(container.orderService.findAll).mockResolvedValue([])
+
+      await getOrders(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(container.orderService.findAll).toHaveBeenCalledWith(undefined, {
+        attributes: ['id', 'userId', 'organizationId', 'totalAmount'],
+        limit: 10,
+        offset: 0,
+      })
+    })
+
+    it('should handle getOrders errors', async () => {
+      mockRequest.query = {}
+
+      vi.mocked(container.orderService.count).mockRejectedValue(
+        new Error('Database error')
+      )
+
+      await getOrders(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500)
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Failed to fetch orders',
+      })
+    })
   })
 
   describe('createOrder', () => {
@@ -146,6 +218,23 @@ describe('Order Controller', () => {
         error: 'Order not found',
       })
     })
+
+    it('should handle getOrder errors', async () => {
+      mockRequest.params = { id: 'order-123' }
+      vi.mocked(container.orderService.findById).mockRejectedValue(
+        new Error('Database error')
+      )
+
+      await getOrder(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500)
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Failed to fetch order',
+      })
+    })
   })
 
   describe('updateOrder', () => {
@@ -222,6 +311,43 @@ describe('Order Controller', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(404)
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: 'Order not found',
+      })
+    })
+
+    it('should handle delete errors', async () => {
+      mockRequest.params = { id: 'order-123' }
+      vi.mocked(container.orderService.delete).mockRejectedValue(
+        new Error('Delete failed')
+      )
+
+      await deleteOrder(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500)
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Failed to delete an order',
+      })
+    })
+  })
+
+  describe('updateOrder - error handling', () => {
+    it('should handle update errors', async () => {
+      mockRequest.params = { id: 'order-123' }
+      mockRequest.body = { totalAmount: 100 }
+      vi.mocked(container.orderService.update).mockRejectedValue(
+        new Error('Update failed')
+      )
+
+      await updateOrder(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500)
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Failed to update order',
       })
     })
   })

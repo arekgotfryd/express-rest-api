@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import bcrypt from 'bcrypt'
-import { hashPassword, comparePassword } from '../../../src/utils/password.ts'
+import { hashPassword, comparePassword, validatePasswordStrength } from '../../../src/utils/password.ts'
 
 vi.mock('bcrypt', () => ({
   default: {
@@ -46,6 +46,58 @@ describe('Password Utils', () => {
       const result = await comparePassword(password, hash)
 
       expect(result).toBe(false)
+    })
+  })
+
+  describe('validatePasswordStrength', () => {
+    it('should return valid for a strong password', () => {
+      const result = validatePasswordStrength('Password1!')
+      expect(result.isValid).toBe(true)
+      expect(result.errors).toHaveLength(0)
+    })
+
+    it('should reject password shorter than 8 characters', () => {
+      const result = validatePasswordStrength('Pa1!')
+      expect(result.isValid).toBe(false)
+      expect(result.errors).toContain('Password must be at least 8 characters long')
+    })
+
+    it('should reject password without uppercase letter', () => {
+      const result = validatePasswordStrength('password1!')
+      expect(result.isValid).toBe(false)
+      expect(result.errors).toContain('Password must contain at least one uppercase letter')
+    })
+
+    it('should reject password without lowercase letter', () => {
+      const result = validatePasswordStrength('PASSWORD1!')
+      expect(result.isValid).toBe(false)
+      expect(result.errors).toContain('Password must contain at least one lowercase letter')
+    })
+
+    it('should reject password without number', () => {
+      const result = validatePasswordStrength('Password!')
+      expect(result.isValid).toBe(false)
+      expect(result.errors).toContain('Password must contain at least one number')
+    })
+
+    it('should reject password without special character', () => {
+      const result = validatePasswordStrength('Password1')
+      expect(result.isValid).toBe(false)
+      expect(result.errors).toContain('Password must contain at least one special character')
+    })
+
+    it('should return multiple errors for weak password', () => {
+      const result = validatePasswordStrength('weak')
+      expect(result.isValid).toBe(false)
+      expect(result.errors.length).toBeGreaterThan(1)
+    })
+
+    it('should accept various special characters', () => {
+      const specialChars = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '+', '=']
+      for (const char of specialChars) {
+        const result = validatePasswordStrength(`Password1${char}`)
+        expect(result.isValid).toBe(true)
+      }
     })
   })
 })
