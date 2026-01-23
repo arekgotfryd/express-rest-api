@@ -6,8 +6,7 @@ import {
   deleteUser,
 } from '../controllers/userController.ts'
 import { authenticateToken } from '../middleware/auth.ts'
-import { cacheControl } from '../middleware/cache.ts'
-import { serverCache, invalidateCacheMiddleware } from '../middleware/serverCache.ts'
+import { serverCache, invalidateCacheMiddleware } from '../middleware/cache.ts'
 import { validateBody, validateQuery } from '../middleware/validation.ts'
 import { updateUserSchema } from '../validation/user.ts'
 import { paginationSchema } from '../validation/pagination.ts'
@@ -57,7 +56,7 @@ router.use(authenticateToken)
  *       500:
  *         description: Server error
  */
-router.get('/', validateQuery(paginationSchema), cacheControl(600), serverCache(), getUsers)
+router.get('/', validateQuery(paginationSchema), serverCache(), getUsers)
 
 /**
  * @swagger
@@ -92,7 +91,7 @@ router.get('/', validateQuery(paginationSchema), cacheControl(600), serverCache(
  *       500:
  *         description: Server error
  */
-router.get('/:id', cacheControl(600), serverCache(), getUser)
+router.get('/:id', serverCache(), getUser)
 
 /**
  * @swagger

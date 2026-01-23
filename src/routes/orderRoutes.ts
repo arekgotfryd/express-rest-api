@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import { authenticateToken } from '../middleware/auth.ts'
-import { etag } from '../middleware/cache.ts'
-import { serverCache, invalidateCacheMiddleware } from '../middleware/serverCache.ts'
+import { serverCache, invalidateCacheMiddleware } from '../middleware/cache.ts'
 import { validateBody, validateQuery } from '../middleware/validation.ts'
 import {
   createOrder,
@@ -58,7 +57,7 @@ router.use(authenticateToken)
  *       500:
  *         description: Server error
  */
-router.get('/', validateQuery(paginationSchema), etag(), serverCache(), getOrders)
+router.get('/', validateQuery(paginationSchema), serverCache(), getOrders)
 
 /**
  * @swagger
@@ -93,7 +92,7 @@ router.get('/', validateQuery(paginationSchema), etag(), serverCache(), getOrder
  *       500:
  *         description: Server error
  */
-router.get('/:id', etag(), serverCache(), getOrder)
+router.get('/:id', serverCache(), getOrder)
 
 /**
  * @swagger

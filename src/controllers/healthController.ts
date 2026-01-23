@@ -1,6 +1,6 @@
 import { sequelize } from '../db/connection.ts'
 import { logger } from '../utils/logger.ts'
-import { getCacheStats } from '../middleware/serverCache.ts'
+import { getCacheStats } from '../middleware/cache.ts'
 
 export const health = async (req, res) => {
   try {

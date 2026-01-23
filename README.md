@@ -216,5 +216,78 @@ The E2E tests will run against the containerized application and database, testi
 *   **Testing**: Utilized **Vitest** for a fast, modern testing experience.
 *   **Docker**: Configured a multi-environment Docker setup (`docker-compose.yml` vs `docker-compose.local.yml`) to support both production-like execution and local development with hot-reloading.
 
+## Cache Flow
+
+The API implements a two-layer caching strategy combining server-side LRU cache with ETag validation:
+
+```
+                    ┌─────────────────────┐
+                    │   GET Request       │
+                    │   If-None-Match: X  │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │  Check Server Cache │
+                    └──────────┬──────────┘
+                               │
+              ┌────────────────┴────────────────┐
+              │                                 │
+              ▼                                 ▼
+    ┌──────────────────┐              ┌──────────────────┐
+    │   CACHE HIT      │              │   CACHE MISS     │
+    │   (have entry)   │              │   (no entry)     │
+    └────────┬─────────┘              └────────┬─────────┘
+             │                                 │
+             ▼                                 ▼
+    ┌──────────────────┐              ┌──────────────────┐
+    │ ETag matches     │              │  Query Database  │
+    │ If-None-Match?   │              │  (controller)    │
+    └────────┬─────────┘              └────────┬─────────┘
+             │                                 │
+      ┌──────┴──────┐                          ▼
+      │             │                 ┌──────────────────┐
+      ▼             ▼                 │ Generate ETag    │
+    ┌─────┐      ┌─────┐              │ Store in cache   │
+    │ YES │      │ NO  │              └────────┬─────────┘
+    └──┬──┘      └──┬──┘                       │
+       │            │                          ▼
+       │            │                 ┌──────────────────┐
+       │            │                 │ ETag matches     │
+       │            │                 │ If-None-Match?   │
+       │            │                 └────────┬─────────┘
+       │            │                          │
+       │            │                   ┌──────┴──────┐
+       │            │                   │             │
+       │            │                   ▼             ▼
+       │            │                 ┌─────┐      ┌─────┐
+       │            │                 │ YES │      │ NO  │
+       │            │                 └──┬──┘      └──┬──┘
+       │            │                    │            │
+       ▼            ▼                    ▼            ▼
+┌────────────┐ ┌────────────┐    ┌────────────┐ ┌────────────┐
+│ X-Cache:   │ │ X-Cache:   │    │ X-Cache:   │ │ X-Cache:   │
+│ HIT        │ │ HIT        │    │ MISS       │ │ MISS       │
+│            │ │            │    │            │ │            │
+│ 304        │ │ 200 + body │    │ 304        │ │ 200 + body │
+│ (no body)  │ │ (cached)   │    │ (no body)  │ │ (fresh)    │
+└────────────┘ └────────────┘    └────────────┘ └────────────┘
+       │            │                    │            │
+       ▼            ▼                    ▼            ▼
+   No DB hit    No DB hit            DB hit       DB hit
+   No body      Body sent            No body      Body sent
+```
+
+**Response headers:**
+- `X-Cache: HIT` - Response served from server cache (no database query)
+- `X-Cache: MISS` - Database was queried
+- `ETag` - Hash of response body for client-side validation
+- `304 Not Modified` - Client's cached copy is still valid (no body sent)
+
+**Cache invalidation:**
+- Cache entries are automatically invalidated when related data is modified (POST/PUT/DELETE)
+- TTL: 10 minutes
+- Scoped by organization to prevent data leakage between tenants
+
 
 

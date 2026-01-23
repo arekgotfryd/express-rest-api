@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Request, Response } from 'express'
 import { health, readiness } from '../../../src/controllers/healthController.ts'
 import { sequelize } from '../../../src/db/connection.ts'
-import * as serverCache from '../../../src/middleware/serverCache.ts'
+import * as serverCache from '../../../src/middleware/cache.ts'
 
 vi.mock('../../../src/db/connection.ts', () => ({
   sequelize: {
@@ -10,7 +10,7 @@ vi.mock('../../../src/db/connection.ts', () => ({
   },
 }))
 
-vi.mock('../../../src/middleware/serverCache.ts', () => ({
+vi.mock('../../../src/middleware/cache.ts', () => ({
   getCacheStats: vi.fn(),
 }))
 
