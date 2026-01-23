@@ -11,11 +11,13 @@ import {
 } from '../controllers/orderController.ts'
 import { orderSchema } from '../validation/order.ts'
 import { paginationSchema } from '../validation/pagination.ts'
+import { organizationRateLimiter } from '../middleware/rateLimit.ts'
 
 const router = Router()
 
 // Apply authentication to all routes
 router.use(authenticateToken)
+router.use(organizationRateLimiter)
 
 /**
  * @swagger
@@ -122,7 +124,12 @@ router.get('/:id', serverCache(), getOrder)
  *       500:
  *         description: Server error
  */
-router.post('/', validateBody(orderSchema), invalidateCacheMiddleware('orders'), createOrder)
+router.post(
+  '/',
+  validateBody(orderSchema),
+  invalidateCacheMiddleware('orders'),
+  createOrder,
+)
 
 /**
  * @swagger
@@ -165,7 +172,12 @@ router.post('/', validateBody(orderSchema), invalidateCacheMiddleware('orders'),
  *       500:
  *         description: Server error
  */
-router.put('/:id', validateBody(orderSchema), invalidateCacheMiddleware('orders'), updateOrder)
+router.put(
+  '/:id',
+  validateBody(orderSchema),
+  invalidateCacheMiddleware('orders'),
+  updateOrder,
+)
 
 /**
  * @swagger

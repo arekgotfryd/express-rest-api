@@ -10,11 +10,13 @@ import { serverCache, invalidateCacheMiddleware } from '../middleware/cache.ts'
 import { validateBody, validateQuery } from '../middleware/validation.ts'
 import { updateUserSchema } from '../validation/user.ts'
 import { paginationSchema } from '../validation/pagination.ts'
+import { organizationRateLimiter } from '../middleware/rateLimit.ts'
 
 const router = Router()
 
 // Apply authentication to all routes
 router.use(authenticateToken)
+router.use(organizationRateLimiter)
 
 /**
  * @swagger
@@ -133,7 +135,12 @@ router.get('/:id', serverCache(), getUser)
  *       500:
  *         description: Server error
  */
-router.put('/:id', validateBody(updateUserSchema), invalidateCacheMiddleware('users'), updateUser)
+router.put(
+  '/:id',
+  validateBody(updateUserSchema),
+  invalidateCacheMiddleware('users'),
+  updateUser,
+)
 
 /**
  * @swagger
