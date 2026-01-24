@@ -40,7 +40,9 @@ export const verifyToken = async (token: string): Promise<JwtPayload> => {
 /**
  * Generate a refresh token with longer expiration
  */
-export const generateRefreshToken = async (payload: JwtPayload): Promise<string> => {
+export const generateRefreshToken = async (
+  payload: JwtPayload,
+): Promise<string> => {
   const secret = env.REFRESH_TOKEN_SECRET
   if (!secret) {
     throw new Error('REFRESH_TOKEN_SECRET environment variable is not set')
@@ -58,7 +60,9 @@ export const generateRefreshToken = async (payload: JwtPayload): Promise<string>
 /**
  * Verify a refresh token and return the payload
  */
-export const verifyRefreshToken = async (token: string): Promise<JwtPayload> => {
+export const verifyRefreshToken = async (
+  token: string,
+): Promise<JwtPayload> => {
   const secret = env.REFRESH_TOKEN_SECRET
   if (!secret) {
     throw new Error('REFRESH_TOKEN_SECRET environment variable is not set')
@@ -72,4 +76,8 @@ export const verifyRefreshToken = async (token: string): Promise<JwtPayload> => 
     email: payload.email as string,
     organizationId: payload.organizationId as string,
   }
+}
+
+export const generateTokenFamily = (): string => {
+  return crypto.randomUUID() // or crypto.randomBytes(16).toString('hex')
 }

@@ -1,14 +1,24 @@
 import type { Request, Response } from 'express'
-import { generateToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.ts'
+import {
+  generateToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+  generateTokenFamily,
+} from '../utils/jwt.ts'
 import { User, Organization } from '../models/index.ts'
 import { logger } from '../utils/logger.ts'
 import { toUserDTO } from '../dtos/mappers.ts'
 import { hashPassword, comparePassword } from '../utils/password.ts'
-import type { AuthResponseDTO, RefreshTokenResponseDTO, ErrorDTO } from '../dtos/index.ts'
+import type {
+  AuthResponseDTO,
+  RefreshTokenResponseDTO,
+  ErrorDTO,
+} from '../dtos/index.ts'
+import { RefreshToken } from '../models/refreshToken.ts'
 
 export const register = async (
   req: Request,
-  res: Response<AuthResponseDTO | ErrorDTO>
+  res: Response<AuthResponseDTO | ErrorDTO>,
 ) => {
   try {
     const { email, password, firstName, lastName, organizationName } = req.body
@@ -46,6 +56,12 @@ export const register = async (
       organizationId: organization.id,
     })
 
+    await RefreshToken.create({
+      token: await hashPassword(refreshToken),
+      tokenFamily: generateTokenFamily(),
+      userId: created.id,
+    })
+
     res.status(201).json({
       message: 'User created successfully',
       user: toUserDTO(created),
@@ -60,7 +76,7 @@ export const register = async (
 
 export const login = async (
   req: Request,
-  res: Response<AuthResponseDTO | ErrorDTO>
+  res: Response<AuthResponseDTO | ErrorDTO>,
 ) => {
   try {
     const { email, password } = req.body
@@ -107,7 +123,7 @@ export const login = async (
 
 export const refreshToken = async (
   req: Request,
-  res: Response<RefreshTokenResponseDTO | ErrorDTO>
+  res: Response<RefreshTokenResponseDTO | ErrorDTO>,
 ) => {
   try {
     const { refreshToken: token } = req.body
@@ -117,12 +133,25 @@ export const refreshToken = async (
     }
 
     // Verify the refresh token
+    // just jose verification
     const payload = await verifyRefreshToken(token)
 
     // Verify user still exists
     const user = await User.findByPk(payload.id)
     if (!user) {
       return res.status(401).json({ error: 'User not found' })
+    }
+    //hash token and check if exists in db and it hasn't been revoked
+    //if it has been revoked revoke all refresh tokens and access token and respond that
+    //user should log in again
+    //if not revoke this single refresh token
+    const hashedRefreshToken = await hashPassword(token);
+    const refreshToken = await RefreshToken.findOne({where: { token: hashedRefreshToken}})
+    if(refreshToken.revoked){
+      await RefreshToken.update({revoked: true},{where: {tokenFamily: refreshToken.tokenFamily}}) 
+      return  res.status(401).json({ error: 'Refresh token has been revoked. Please log in again.' })
+    } else {
+      await RefreshToken.update({revoked: true},{where: {token: hashedRefreshToken}}) 
     }
 
     // Generate new tokens
@@ -136,6 +165,12 @@ export const refreshToken = async (
       id: user.id,
       email: user.email,
       organizationId: user.organizationId,
+    })
+
+    await RefreshToken.create({
+      token: await hashPassword(newRefreshToken),
+      userId: user.id,
+      tokenFamily: refreshToken.tokenFamily,
     })
 
     res.json({
