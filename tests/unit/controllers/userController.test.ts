@@ -91,11 +91,7 @@ describe('UserController', () => {
       )
 
       expect(container.userService.count).toHaveBeenCalled()
-      expect(container.userService.findAll).toHaveBeenCalledWith(undefined, {
-        attributes: ['id', 'email', 'firstName', 'lastName'],
-        limit: 10,
-        offset: 0,
-      })
+      expect(container.userService.findAll).toHaveBeenCalledWith(10, 0)
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         users: expectedUsers,
@@ -119,11 +115,7 @@ describe('UserController', () => {
         mockResponse as Response
       )
 
-      expect(container.userService.findAll).toHaveBeenCalledWith(undefined, {
-        attributes: ['id', 'email', 'firstName', 'lastName'],
-        limit: 10,
-        offset: 0,
-      })
+      expect(container.userService.findAll).toHaveBeenCalledWith(10, 0)
     })
 
     it('should handle errors', async () => {
@@ -170,9 +162,7 @@ describe('UserController', () => {
         mockResponse as Response
       )
 
-      expect(container.userService.findById).toHaveBeenCalledWith('user-123', {
-        attributes: ['id', 'email', 'firstName', 'lastName'],
-      })
+      expect(container.userService.findById).toHaveBeenCalledWith('user-123')
       expect(mockResponse.json).toHaveBeenCalledWith({ user: expectedUser })
     })
 
@@ -218,7 +208,7 @@ describe('UserController', () => {
       vi.mocked(container.userService.findById).mockResolvedValue({
         id: 'user-123',
       } as any)
-      vi.mocked(container.userService.update).mockResolvedValue([1])
+      vi.mocked(container.userService.update).mockResolvedValue(1)
 
       mockRequest.body = {
         firstName: 'Updated',

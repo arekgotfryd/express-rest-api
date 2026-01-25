@@ -48,7 +48,7 @@ export const getOrder = async (
   try {
     const orderId = req.params.id
 
-    const order: Order = await container.orderService.findById(orderId)
+    const order = await container.orderService.findById(orderId)
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' })
@@ -90,13 +90,13 @@ export const updateOrder = async (
     const orderId = req.params.id
     const { userId, organizationId, totalAmount } = req.body
 
-    const updatedOrders = await container.orderService.update(orderId, {
+    const updatedCount = await container.orderService.update(orderId, {
       userId,
       organizationId,
       totalAmount,
     })
 
-    if (updatedOrders[0] === 0) {
+    if (updatedCount === 0) {
       return res.status(404).json({ error: 'Order not found' })
     }
 

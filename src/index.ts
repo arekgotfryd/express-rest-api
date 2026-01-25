@@ -1,4 +1,4 @@
-import { env } from '../env.ts'
+import { env } from './config/env.ts'
 import app from './server.ts'
 import { logger } from './utils/logger.ts'
 import { sequelize } from './db/connection.ts'

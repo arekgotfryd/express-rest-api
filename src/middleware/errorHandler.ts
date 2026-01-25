@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import env from '../../env.ts'
+import env from '../config/env.ts'
 import { logger } from '../utils/logger.ts'
 
 export interface CustomError extends Error {

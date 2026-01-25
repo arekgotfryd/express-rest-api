@@ -1,8 +1,9 @@
+import type { Request, Response } from 'express'
 import { sequelize } from '../db/connection.ts'
 import { logger } from '../utils/logger.ts'
 import { getCacheStats } from '../middleware/serverCache.ts'
 
-export const health = async (req, res) => {
+export const health = async (req: Request, res: Response) => {
   try {
     res.status(200).json({
       status: 'OK',
@@ -15,7 +16,7 @@ export const health = async (req, res) => {
   }
 }
 
-export const readiness = async (req, res) => {
+export const readiness = async (req: Request, res: Response) => {
   const checks = {
     database: false,
     cache: false,

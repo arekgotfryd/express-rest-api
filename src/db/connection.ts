@@ -1,5 +1,5 @@
 import { Sequelize } from 'sequelize'
-import { env, isProd } from '../../env.ts'
+import { env, isProd } from '../config/env.ts'
 import { remember } from '@epic-web/remember'
 import logger from '../utils/logger.ts'
 

@@ -91,7 +91,7 @@ export const updateOrganization = async (
     const organizationId = req.params.id
     const { name, industry, dateFounded } = req.body
 
-    const updatedOrgs = await container.organizationService.update(
+    const updatedCount = await container.organizationService.update(
       organizationId,
       {
         name,
@@ -100,7 +100,7 @@ export const updateOrganization = async (
       },
     )
 
-    if (updatedOrgs[0] === 0) {
+    if (updatedCount === 0) {
       return res.status(404).json({ error: 'Organization not found' })
     }
 

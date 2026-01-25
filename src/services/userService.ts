@@ -1,27 +1,30 @@
-import { User } from '../models/index.ts'
-import type { UserRepository } from '../db/repository/UserRepository.ts'
+import type { User } from '../models/user.ts'
+import type { Repository } from '../db/repository/Repository.ts'
 
 export class UserService {
-  userRepository: UserRepository
-  constructor(userRepository: UserRepository) {
-    this.userRepository = userRepository
-  }
+  constructor(private repository: Repository<User>) {}
+
   findById(id: string | number) {
-    return this.userRepository.findById(id)
+    return this.repository.findById(id)
   }
-  save(user: User) {
-    return this.userRepository.save(user)
+
+  save(user: Partial<User>) {
+    return this.repository.save(user)
   }
+
   delete(id: string | number) {
-    return this.userRepository.delete(id)
+    return this.repository.delete(id)
   }
-  update(id: string | number, user: User) {
-    return this.userRepository.update(id, user)
+
+  update(id: string | number, user: Partial<User>) {
+    return this.repository.update(id, user)
   }
+
   count() {
-    return this.userRepository.count()
+    return this.repository.count()
   }
-  findAll(limit: number, offset: number): Promise<User[] | null> {
-    return this.userRepository.findAll(limit, offset)
+
+  findAll(limit: number, offset: number): Promise<User[]> {
+    return this.repository.findAll(limit, offset)
   }
 }

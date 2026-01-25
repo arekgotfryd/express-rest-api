@@ -1,27 +1,30 @@
-import { Order } from '../models/index.ts'
-import type { OrderRepository } from '../db/repository/OrderRepository.ts'
+import type { Order } from '../models/order.ts'
+import type { Repository } from '../db/repository/Repository.ts'
 
 export class OrderService {
-  OrderRepository: OrderRepository
-  constructor(OrderRepository: OrderRepository) {
-    this.OrderRepository = OrderRepository
-  }
+  constructor(private repository: Repository<Order>) {}
+
   findById(id: string | number) {
-    return this.OrderRepository.findById(id)
+    return this.repository.findById(id)
   }
+
   save(order: Partial<Order>) {
-    return this.OrderRepository.save(order)
+    return this.repository.save(order)
   }
+
   delete(id: string | number) {
-    return this.OrderRepository.delete(id)
+    return this.repository.delete(id)
   }
+
   update(id: string | number, order: Partial<Order>) {
-    return this.OrderRepository.update(id, order)
+    return this.repository.update(id, order)
   }
+
   count() {
-    return this.OrderRepository.count()
+    return this.repository.count()
   }
-  findAll(limit: number, offset: number): Promise<Order[] | null> {
-    return this.OrderRepository.findAll(limit, offset)
+
+  findAll(limit: number, offset: number): Promise<Order[]> {
+    return this.repository.findAll(limit, offset)
   }
 }

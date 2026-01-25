@@ -1,19 +1,24 @@
+# Build stage
+FROM node:23.6.1-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+# Production stage
 FROM node:23.6.1-alpine
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
+RUN npm ci --omit=dev
 
-# Install dependencies
-RUN npm ci
+COPY --from=builder /app/dist ./dist
 
-# Copy source code
-COPY . .
-
-# Expose port
 EXPOSE 3000
 
-# Start the application
-# Using --experimental-strip-types to run TypeScript files directly
-CMD ["node", "--experimental-strip-types", "src/index.ts"]
+CMD ["node", "dist/index.js"]
