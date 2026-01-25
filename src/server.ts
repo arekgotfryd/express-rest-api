@@ -1,4 +1,4 @@
-import { env, isTestEnv } from '../env.ts'
+import { env, isTestEnv } from './config/env.ts'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'

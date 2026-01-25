@@ -5,13 +5,12 @@ import type { AuthenticatedRequest } from '../../../src/middleware/auth.ts'
 vi.mock('../../../src/container.ts', () => ({
   container: {
     organizationService: {
-      create: vi.fn(),
+      save: vi.fn(),
       findById: vi.fn(),
       findAll: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
       count: vi.fn(),
-      findByIndustry: vi.fn(),
     },
   },
 }))
@@ -80,11 +79,7 @@ describe('Organization Controller', () => {
       )
 
       expect(container.organizationService.count).toHaveBeenCalled()
-      expect(container.organizationService.findAll).toHaveBeenCalledWith(undefined, {
-        attributes: ['id', 'name', 'industry', 'dateFounded'],
-        limit: 10,
-        offset: 0,
-      })
+      expect(container.organizationService.findAll).toHaveBeenCalledWith(10, 0)
       expect(mockResponse.json).toHaveBeenCalledWith({
         organizations: organizations,
         pagination: {
@@ -109,11 +104,7 @@ describe('Organization Controller', () => {
         mockResponse as Response
       )
 
-      expect(container.organizationService.findAll).toHaveBeenCalledWith(undefined, {
-        attributes: ['id', 'name', 'industry', 'dateFounded'],
-        limit: 10,
-        offset: 0,
-      })
+      expect(container.organizationService.findAll).toHaveBeenCalledWith(10, 0)
     })
 
     it('should handle getOrganizations errors', async () => {
@@ -151,10 +142,7 @@ describe('Organization Controller', () => {
         mockResponse as Response
       )
 
-      expect(container.organizationService.findById).toHaveBeenCalledWith(
-        'org-123',
-        expect.anything()
-      )
+      expect(container.organizationService.findById).toHaveBeenCalledWith('org-123')
       expect(mockResponse.json).toHaveBeenCalledWith({ organization })
     })
 
@@ -204,7 +192,7 @@ describe('Organization Controller', () => {
       }
 
       mockRequest.body = orgData
-      vi.mocked(container.organizationService.create).mockResolvedValue(
+      vi.mocked(container.organizationService.save).mockResolvedValue(
         createdOrg as any
       )
 
@@ -213,7 +201,7 @@ describe('Organization Controller', () => {
         mockResponse as Response
       )
 
-      expect(container.organizationService.create).toHaveBeenCalledWith(orgData)
+      expect(container.organizationService.save).toHaveBeenCalledWith(orgData)
       expect(mockResponse.status).toHaveBeenCalledWith(201)
       expect(mockResponse.json).toHaveBeenCalledWith({
         message: 'Organization has been created',
@@ -223,7 +211,7 @@ describe('Organization Controller', () => {
     it('should handle creation errors', async () => {
       mockRequest.body = { name: 'Test Company' }
 
-      vi.mocked(container.organizationService.create).mockRejectedValue(
+      vi.mocked(container.organizationService.save).mockRejectedValue(
         new Error('Creation failed')
       )
 
@@ -257,10 +245,7 @@ describe('Organization Controller', () => {
         mockResponse as Response
       )
 
-      expect(container.organizationService.findById).toHaveBeenCalledWith(
-        'org-123',
-        expect.anything()
-      )
+      expect(container.organizationService.findById).toHaveBeenCalledWith('org-123')
       expect(mockResponse.json).toHaveBeenCalledWith({ organization })
     })
 
@@ -295,7 +280,7 @@ describe('Organization Controller', () => {
       vi.mocked(container.organizationService.findById).mockResolvedValue(
         updatedOrg as any
       )
-      vi.mocked(container.organizationService.update).mockResolvedValue([1])
+      vi.mocked(container.organizationService.update).mockResolvedValue(1)
 
       await updateOrganization(
         mockRequest as AuthenticatedRequest,
@@ -316,7 +301,7 @@ describe('Organization Controller', () => {
       mockRequest.body = { name: 'Updated Company' }
 
       vi.mocked(container.organizationService.findById).mockResolvedValue(null)
-      vi.mocked(container.organizationService.update).mockResolvedValue([0])
+      vi.mocked(container.organizationService.update).mockResolvedValue(0)
 
       await updateOrganization(
         mockRequest as AuthenticatedRequest,

@@ -6,13 +6,12 @@ import { container } from '../../../src/container.ts'
 vi.mock('../../../src/container.ts', () => ({
   container: {
     orderService: {
-      create: vi.fn(),
+      save: vi.fn(),
       findAll: vi.fn(),
       findById: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
       count: vi.fn(),
-      getTotalAmountByUser: vi.fn(),
     },
   },
 }))
@@ -73,11 +72,7 @@ describe('Order Controller', () => {
       )
 
       expect(container.orderService.count).toHaveBeenCalled()
-      expect(container.orderService.findAll).toHaveBeenCalledWith(undefined, {
-        attributes: ['id', 'userId', 'organizationId', 'totalAmount'],
-        limit: 10,
-        offset: 0,
-      })
+      expect(container.orderService.findAll).toHaveBeenCalledWith(10, 0)
       expect(mockResponse.json).toHaveBeenCalledWith({
         orders: orders,
         pagination: {
@@ -102,11 +97,7 @@ describe('Order Controller', () => {
         mockResponse as Response
       )
 
-      expect(container.orderService.findAll).toHaveBeenCalledWith(undefined, {
-        attributes: ['id', 'userId', 'organizationId', 'totalAmount'],
-        limit: 10,
-        offset: 0,
-      })
+      expect(container.orderService.findAll).toHaveBeenCalledWith(10, 0)
     })
 
     it('should handle getOrders errors', async () => {
@@ -130,15 +121,11 @@ describe('Order Controller', () => {
 
   describe('createOrder', () => {
     it('should create an order', async () => {
-      const orderData = {
+      const createdOrder = {
+        id: 'order-123',
         userId: 'user-123',
         organizationId: 'org-123',
         totalAmount: 100.5,
-      }
-
-      const createdOrder = {
-        id: 'order-123',
-        ...orderData,
         createdAt: new Date(),
         updatedAt: new Date(),
       }
@@ -151,23 +138,27 @@ describe('Order Controller', () => {
         totalAmount: 100.5,
       }
 
-      mockRequest.body = orderData
-      vi.mocked(container.orderService.create).mockResolvedValue(createdOrder as any)
+      mockRequest.body = { totalAmount: 100.5 }
+      vi.mocked(container.orderService.save).mockResolvedValue(createdOrder as any)
 
       await createOrder(
         mockRequest as AuthenticatedRequest,
         mockResponse as Response
       )
 
-      expect(container.orderService.create).toHaveBeenCalledWith(orderData)
+      expect(container.orderService.save).toHaveBeenCalledWith({
+        userId: 'user-123',
+        organizationId: 'org-123',
+        totalAmount: 100.5,
+      })
       expect(mockResponse.status).toHaveBeenCalledWith(201)
       expect(mockResponse.json).toHaveBeenCalledWith({ order: expectedOrder })
     })
 
     it('should handle creation errors', async () => {
-      mockRequest.body = { userId: 'user-123' }
+      mockRequest.body = { totalAmount: 100 }
 
-      vi.mocked(container.orderService.create).mockRejectedValue(new Error('Creation failed'))
+      vi.mocked(container.orderService.save).mockRejectedValue(new Error('Creation failed'))
 
       await createOrder(
         mockRequest as AuthenticatedRequest,
@@ -197,10 +188,7 @@ describe('Order Controller', () => {
         mockResponse as Response
       )
 
-      expect(container.orderService.findById).toHaveBeenCalledWith(
-        'order-123',
-        expect.anything()
-      )
+      expect(container.orderService.findById).toHaveBeenCalledWith('order-123')
       expect(mockResponse.json).toHaveBeenCalledWith({ order })
     })
 
@@ -247,7 +235,7 @@ describe('Order Controller', () => {
       mockRequest.params = { id: 'order-123' }
       mockRequest.body = updateData
 
-      vi.mocked(container.orderService.update).mockResolvedValue([1])
+      vi.mocked(container.orderService.update).mockResolvedValue(1)
 
       await updateOrder(
         mockRequest as AuthenticatedRequest,
@@ -268,8 +256,7 @@ describe('Order Controller', () => {
       mockRequest.params = { id: 'nonexistent' }
       mockRequest.body = { status: 'completed' }
 
-      vi.mocked(container.orderService.findById).mockResolvedValue(null)
-      vi.mocked(container.orderService.update).mockResolvedValue([0])
+      vi.mocked(container.orderService.update).mockResolvedValue(0)
 
       await updateOrder(
         mockRequest as AuthenticatedRequest,

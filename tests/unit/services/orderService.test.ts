@@ -1,30 +1,26 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { OrderService } from '../../../src/services/orderService.ts'
-import { Order } from '../../../src/models/index.ts'
-
-vi.mock('../../../src/models/index.ts', () => ({
-  Order: {
-    create: vi.fn(),
-    findByPk: vi.fn(),
-    findOne: vi.fn(),
-    findAll: vi.fn(),
-    update: vi.fn(),
-    destroy: vi.fn(),
-    count: vi.fn(),
-  },
-  User: {},
-  Organization: {},
-}))
+import type { Repository } from '../../../src/db/repository/Repository.ts'
+import type { Order } from '../../../src/models/order.ts'
 
 describe('OrderService', () => {
   let orderService: OrderService
+  let mockRepository: Repository<Order>
 
   beforeEach(() => {
-    orderService = new OrderService()
+    mockRepository = {
+      findById: vi.fn(),
+      save: vi.fn(),
+      delete: vi.fn(),
+      update: vi.fn(),
+      findAll: vi.fn(),
+      count: vi.fn(),
+    }
+    orderService = new OrderService(mockRepository)
     vi.clearAllMocks()
   })
 
-  describe('create', () => {
+  describe('save', () => {
     it('should create a new order', async () => {
       const orderData = {
         userId: 'user-123',
@@ -33,11 +29,11 @@ describe('OrderService', () => {
       }
 
       const mockOrder = { id: 'order-123', ...orderData }
-      vi.mocked(Order.create).mockResolvedValue(mockOrder as any)
+      vi.mocked(mockRepository.save).mockResolvedValue(mockOrder as Order)
 
-      const result = await orderService.create(orderData)
+      const result = await orderService.save(orderData)
 
-      expect(Order.create).toHaveBeenCalledWith(orderData, undefined)
+      expect(mockRepository.save).toHaveBeenCalledWith(orderData)
       expect(result).toEqual(mockOrder)
     })
   })
@@ -50,50 +46,90 @@ describe('OrderService', () => {
         totalAmount: 100,
       }
 
-      vi.mocked(Order.findByPk).mockResolvedValue(mockOrder as any)
+      vi.mocked(mockRepository.findById).mockResolvedValue(mockOrder as Order)
 
       const result = await orderService.findById('order-123')
 
-      expect(Order.findByPk).toHaveBeenCalledWith('order-123', undefined)
+      expect(mockRepository.findById).toHaveBeenCalledWith('order-123')
       expect(result).toEqual(mockOrder)
+    })
+
+    it('should return null when order not found', async () => {
+      vi.mocked(mockRepository.findById).mockResolvedValue(null)
+
+      const result = await orderService.findById('nonexistent')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('findAll', () => {
+    it('should find all orders with pagination', async () => {
+      const mockOrders = [
+        { id: 'order-1', userId: 'user-1', totalAmount: 100 },
+        { id: 'order-2', userId: 'user-2', totalAmount: 200 },
+      ]
+
+      vi.mocked(mockRepository.findAll).mockResolvedValue(mockOrders as Order[])
+
+      const result = await orderService.findAll(10, 0)
+
+      expect(mockRepository.findAll).toHaveBeenCalledWith(10, 0)
+      expect(result).toEqual(mockOrders)
     })
   })
 
   describe('update', () => {
     it('should update an order', async () => {
-      vi.mocked(Order.update).mockResolvedValue([1] as any)
+      vi.mocked(mockRepository.update).mockResolvedValue(1)
 
       const result = await orderService.update('order-123', {
         totalAmount: 150,
       })
 
-      expect(Order.update).toHaveBeenCalledWith(
-        { totalAmount: 150 },
-        { where: { id: 'order-123' } }
-      )
-      expect(result).toEqual([1])
+      expect(mockRepository.update).toHaveBeenCalledWith('order-123', {
+        totalAmount: 150,
+      })
+      expect(result).toBe(1)
+    })
+
+    it('should return 0 when order not found', async () => {
+      vi.mocked(mockRepository.update).mockResolvedValue(0)
+
+      const result = await orderService.update('nonexistent', {
+        totalAmount: 150,
+      })
+
+      expect(result).toBe(0)
     })
   })
 
   describe('delete', () => {
     it('should delete an order', async () => {
-      vi.mocked(Order.destroy).mockResolvedValue(1)
+      vi.mocked(mockRepository.delete).mockResolvedValue(1)
 
       const result = await orderService.delete('order-123')
 
-      expect(Order.destroy).toHaveBeenCalledWith({
-        where: { id: 'order-123' },
-      })
+      expect(mockRepository.delete).toHaveBeenCalledWith('order-123')
       expect(result).toBe(1)
+    })
+
+    it('should return 0 when order not found', async () => {
+      vi.mocked(mockRepository.delete).mockResolvedValue(0)
+
+      const result = await orderService.delete('nonexistent')
+
+      expect(result).toBe(0)
     })
   })
 
   describe('count', () => {
     it('should count all orders', async () => {
-      vi.mocked(Order.count).mockResolvedValue(10)
+      vi.mocked(mockRepository.count).mockResolvedValue(10)
 
       const result = await orderService.count()
 
+      expect(mockRepository.count).toHaveBeenCalled()
       expect(result).toBe(10)
     })
   })

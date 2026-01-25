@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { createSecretKey } from 'crypto'
-import env from '../../env.ts'
+import env from '../config/env.ts'
 import { logger } from './logger.ts'
 
 export interface JwtPayload {
