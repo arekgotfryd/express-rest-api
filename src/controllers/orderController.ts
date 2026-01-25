@@ -12,8 +12,6 @@ import type {
   ErrorDTO,
 } from '../dtos/index.ts'
 
-const attributes = ['id', 'userId', 'organizationId', 'totalAmount']
-
 export const getOrders = async (
   req: AuthenticatedRequest,
   res: Response<OrdersResponseDTO | ErrorDTO>
@@ -28,11 +26,10 @@ export const getOrders = async (
     const totalCount = await container.orderService.count()
 
     // Fetch paginated orders
-    const orders = await container.orderService.findAll(undefined, {
-      attributes,
+    const orders = await container.orderService.findAll(
       limit,
       offset,
-    })
+    )
 
     res.json({
       orders: toOrderDTOList(orders),
@@ -51,19 +48,7 @@ export const getOrder = async (
   try {
     const orderId = req.params.id
 
-    const order: Order = await container.orderService.findById(orderId, {
-      attributes,
-      include: [
-        {
-          association: 'user',
-          attributes: ['id', 'email'],
-        },
-        {
-          association: 'organization',
-          attributes: ['id', 'name'],
-        },
-      ],
-    })
+    const order: Order = await container.orderService.findById(orderId)
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' })
@@ -84,7 +69,7 @@ export const createOrder = async (
     const { totalAmount } = req.body
     const userId = req.user!.id
     const organizationId = req.user!.organizationId
-    const order = await container.orderService.create({
+    const order = await container.orderService.save({
       userId,
       organizationId,
       totalAmount,
