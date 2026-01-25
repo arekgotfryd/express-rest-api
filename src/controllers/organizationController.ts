@@ -2,7 +2,11 @@ import type { Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.ts'
 import { container } from '../container.ts'
 import { logger } from '../utils/logger.ts'
-import { toOrganizationDTO, toOrganizationDTOList, toPaginationDTO } from '../dtos/mappers.ts'
+import {
+  toOrganizationDTO,
+  toOrganizationDTOList,
+  toPaginationDTO,
+} from '../dtos/mappers.ts'
 import type {
   OrganizationsResponseDTO,
   OrganizationResponseDTO,
@@ -14,7 +18,7 @@ const attributes = ['id', 'name', 'industry', 'dateFounded']
 
 export const getOrganizations = async (
   req: AuthenticatedRequest,
-  res: Response<OrganizationsResponseDTO | ErrorDTO>
+  res: Response<OrganizationsResponseDTO | ErrorDTO>,
 ) => {
   try {
     const page = parseInt(req.query.page as string) || 1
@@ -24,11 +28,10 @@ export const getOrganizations = async (
     // Get total count for pagination metadata
     const totalCount = await container.organizationService.count()
 
-    const organizations = await container.organizationService.findAll(undefined, {
-      attributes,
+    const organizations = await container.organizationService.findAll(
       limit,
       offset,
-    })
+    )
 
     res.json({
       organizations: toOrganizationDTOList(organizations),
@@ -42,17 +45,13 @@ export const getOrganizations = async (
 
 export const getOrganization = async (
   req: AuthenticatedRequest,
-  res: Response<OrganizationResponseDTO | ErrorDTO>
+  res: Response<OrganizationResponseDTO | ErrorDTO>,
 ) => {
   try {
     const organizationId = req.params.id
 
-    const organization = await container.organizationService.findById(
-      organizationId,
-      {
-        attributes,
-      }
-    )
+    const organization =
+      await container.organizationService.findById(organizationId)
 
     if (!organization) {
       return res.status(404).json({ error: 'Organization not found' })
@@ -67,11 +66,11 @@ export const getOrganization = async (
 
 export const createOrganization = async (
   req: AuthenticatedRequest,
-  res: Response<MessageDTO | ErrorDTO>
+  res: Response<MessageDTO | ErrorDTO>,
 ) => {
   try {
     const { name, industry, dateFounded } = req.body
-    await container.organizationService.create({
+    await container.organizationService.save({
       name,
       industry,
       dateFounded,
@@ -86,7 +85,7 @@ export const createOrganization = async (
 
 export const updateOrganization = async (
   req: AuthenticatedRequest,
-  res: Response<MessageDTO | ErrorDTO>
+  res: Response<MessageDTO | ErrorDTO>,
 ) => {
   try {
     const organizationId = req.params.id
@@ -98,7 +97,7 @@ export const updateOrganization = async (
         name,
         industry,
         dateFounded,
-      }
+      },
     )
 
     if (updatedOrgs[0] === 0) {
@@ -116,10 +115,12 @@ export const updateOrganization = async (
 
 export const deleteOrganization = async (
   req: AuthenticatedRequest,
-  res: Response<MessageDTO | ErrorDTO>
+  res: Response<MessageDTO | ErrorDTO>,
 ) => {
   try {
-    const deletedCount = await container.organizationService.delete(req.params.id)
+    const deletedCount = await container.organizationService.delete(
+      req.params.id,
+    )
 
     if (deletedCount === 0) {
       return res.status(404).json({ error: 'Organization not found' })
@@ -131,4 +132,3 @@ export const deleteOrganization = async (
     res.status(500).json({ error: 'Failed to delete an organization' })
   }
 }
-
