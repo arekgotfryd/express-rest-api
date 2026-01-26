@@ -3,8 +3,9 @@ import app from './server.ts'
 import { logger } from './utils/logger.ts'
 import { sequelize } from './db/connection.ts'
 import type { Server } from 'http'
+import figlet from 'figlet'
 
-let server: Server
+let server: Server = null
 
 // Handle unhandled exceptions
 process.on('uncaughtException', (err: Error) => {
@@ -59,4 +60,5 @@ server = app.listen(env.PORT, () => {
   logger.info(`Server running on port ${env.PORT}`)
   logger.info(`Environment: ${env.APP_STAGE}`)
   logger.info(`LOG_LEVEL: ${env.LOG_LEVEL}`)
+  console.log(figlet.textSync('Express REST API Ready'))
 })
