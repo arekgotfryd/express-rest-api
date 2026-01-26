@@ -21,7 +21,18 @@ const logger = createLogger({
 if (env.NODE_ENV !== 'production') {
   logger.add(
     new transports.Console({
-      format: format.combine(format.colorize(), format.simple()),
+      format: format.combine(
+        format.colorize(),
+        format.printf(({ level, message, ms, ...rest }) => {
+          // Format SQL queries with timing
+          if (ms !== undefined) {
+            return `${level}: ${message} (${ms}ms)`
+          }
+          // Format regular messages
+          const extra = Object.keys(rest).length > 1 ? ` ${JSON.stringify(rest)}` : ''
+          return `${level}: ${message}${extra}`
+        })
+      ),
     })
   )
 }
