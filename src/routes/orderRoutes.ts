@@ -9,7 +9,7 @@ import {
   getOrders,
   updateOrder,
 } from '../controllers/orderController.ts'
-import { orderSchema } from '../validation/order.ts'
+import { orderSchema, orderUpdateSchema } from '../validation/order.ts'
 import { paginationSchema } from '../validation/pagination.ts'
 import { organizationRateLimiter } from '../middleware/rateLimit.ts'
 
@@ -153,15 +153,12 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - totalAmount
  *             properties:
- *               userId:
- *                 type: string
- *                 format: uuid
- *               organizationId:
- *                 type: string
- *                 format: uuid
  *               totalAmount:
  *                 type: integer
+ *                 description: Updated total order amount
  *     responses:
  *       200:
  *         description: Order updated successfully
@@ -172,12 +169,7 @@ router.post(
  *       500:
  *         description: Server error
  */
-router.put(
-  '/:id',
-  validateBody(orderSchema),
-  invalidateCacheMiddleware('orders'),
-  updateOrder,
-)
+router.put('/:id', validateBody(orderUpdateSchema), invalidateCacheMiddleware('orders'), updateOrder)
 
 /**
  * @swagger

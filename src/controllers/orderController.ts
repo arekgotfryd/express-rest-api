@@ -88,11 +88,9 @@ export const updateOrder = async (
 ) => {
   try {
     const orderId = req.params.id
-    const { userId, organizationId, totalAmount } = req.body
+    const { totalAmount } = req.body
 
     const updatedCount = await container.orderService.update(orderId, {
-      userId,
-      organizationId,
       totalAmount,
     })
 

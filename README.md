@@ -128,7 +128,7 @@ The final repository must include:
 ---
 ## How to run the app locally
 
-1.  **Prerequisites**: Ensure you have Node.js (v23+) and MySQL 8 installed.
+1.  **Prerequisites**: Ensure you have Node.js (v22+) and MySQL 8 installed.
 2.  **Install Dependencies**:
     ```bash
     npm install

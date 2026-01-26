@@ -1,5 +1,5 @@
 import type { User } from '../models/user.ts'
-import type { Repository } from '../db/repository/Repository.ts'
+import type { Repository } from '../db/repository.ts'
 
 export class UserService {
   constructor(private repository: Repository<User>) {}

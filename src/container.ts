@@ -1,7 +1,7 @@
 import { UserService } from './services/userService.ts'
 import { OrderService } from './services/orderService.ts'
 import { OrganizationService } from './services/organizationService.ts'
-import { SequelizeRepository } from './db/repository/Repository.ts'
+import { SequelizeRepository } from './db/repository.ts'
 import { User } from './models/user.ts'
 import { Order } from './models/order.ts'
 import { Organization } from './models/organization.ts'
