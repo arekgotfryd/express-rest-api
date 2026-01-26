@@ -228,8 +228,6 @@ describe('Order Controller', () => {
   describe('updateOrder', () => {
     it('should update an order', async () => {
       const updateData = {
-        userId: 'userId',
-        organizationId: 'orgId',
         totalAmount: 150.75,
       }
       mockRequest.params = { id: 'order-123' }
@@ -244,12 +242,33 @@ describe('Order Controller', () => {
 
       expect(container.orderService.update).toHaveBeenCalledWith(
         'order-123',
-        updateData
+        { totalAmount: 150.75 }
       )
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         message: 'Order updated successfully',
       })
+    })
+
+    it('should only update totalAmount even if other fields are passed', async () => {
+      mockRequest.params = { id: 'order-123' }
+      mockRequest.body = {
+        userId: 'some-user-id',
+        organizationId: 'some-org-id',
+        totalAmount: 200,
+      }
+
+      vi.mocked(container.orderService.update).mockResolvedValue(1)
+
+      await updateOrder(
+        mockRequest as AuthenticatedRequest,
+        mockResponse as Response
+      )
+
+      expect(container.orderService.update).toHaveBeenCalledWith(
+        'order-123',
+        { totalAmount: 200 }
+      )
     })
 
     it('should return 404 if order not found', async () => {

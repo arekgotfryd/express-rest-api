@@ -1,5 +1,5 @@
 import type { Order } from '../models/order.ts'
-import type { Repository } from '../db/repository/Repository.ts'
+import type { Repository } from '../db/repository.ts'
 
 export class OrderService {
   constructor(private repository: Repository<Order>) {}

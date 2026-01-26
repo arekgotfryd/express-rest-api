@@ -1,14 +1,14 @@
 {
   "name": "express-rest-api",
   "version": "1.0.0",
-  "description": "Habit Tracker API for Node.js course",
+  "description": "A RESTful API built with Express and Sequelize",
   "main": "dist/index.js",
   "type": "module",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "vite-node --watch src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "build": "vite build",
     "build:tsc": "tsc",
@@ -20,7 +20,8 @@
     "lint": "eslint .",
     "db:migrate": "sequelize db:migrate",
     "db:migrate:undo": "sequelize db:migrate:undo",
-    "db:seed": "vite-node src/db/seed.ts",
+    "db:migrate:undo:all": "sequelize db:migrate:undo:all",
+    "db:seed": "tsx src/db/seed.ts",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean"
   },
@@ -74,7 +75,6 @@
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.50.0",
     "vite": "^7.3.1",
-    "vite-node": "^5.3.0",
     "vitest": "^3.2.4"
   }
 }

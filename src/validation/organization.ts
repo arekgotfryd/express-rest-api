@@ -9,5 +9,7 @@ export const organizationSchema = z.object({
     .string()
     .min(1, 'Please provide industry')
     .max(100, 'Industry name too long'),
-  dateFounded: z.date().max(new Date(), 'Date founded must be in the past'),
+  dateFounded: z.coerce
+    .date()
+    .refine((date) => date <= new Date(), 'Date founded must be in the past'),
 })

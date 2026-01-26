@@ -8,4 +8,4 @@ services:
       - /app/node_modules
     ports:
       - "9229:9229"
-    command: npx vite-node --watch --inspect=0.0.0.0:9229 src/index.ts
+    command: npx tsx watch --clear-screen=false --inspect=0.0.0.0:9229 src/index.ts

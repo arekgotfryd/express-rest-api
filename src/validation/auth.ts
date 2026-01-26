@@ -25,6 +25,7 @@ export const loginSchema = z.object({
 
 export const registerUserSchema = updateUserSchema.extend({
   password: passwordSchema,
+  organizationName: z.string().min(1, 'Please provide organization name').max(100, 'Organization name too long'),
 })
 
 export const refreshTokenSchema = z.object({
