@@ -163,6 +163,21 @@ To rebuild the image (e.g. after installing new dependencies):
 docker compose down && docker compose build --no-cache && docker compose up
 ```
 
+## How to debug with Chrome DevTools
+
+1. **Start the app with the local compose file**:
+    ```bash
+    docker compose up
+    ```
+
+2. **Open Chrome** and navigate to `chrome://inspect`
+
+3. **Click "Configure"** and ensure `localhost:9229` is in the list
+
+4. Your Node.js app will appear under **Remote Target** — click **inspect** to open DevTools
+
+You can now set breakpoints, inspect variables, and step through code.
+
 ## How to access the Swagger UI
 
 Once the application is running, you can access the interactive API documentation at:

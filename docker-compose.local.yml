@@ -3,4 +3,6 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-    command: node --watch --experimental-strip-types src/index.ts
+    ports:
+      - "9229:9229"
+    command: node --watch --inspect=0.0.0.0:9229 --experimental-strip-types src/index.ts
