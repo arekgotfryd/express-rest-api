@@ -1,7 +1,7 @@
 import rateLimit from 'express-rate-limit'
 import type { Request, Response } from 'express'
 import type { AuthenticatedRequest } from './auth.ts'
-import { env } from '../../env.ts'
+import { env } from '../config/env.ts'
 
 /**
  * Rate limiter for API endpoints

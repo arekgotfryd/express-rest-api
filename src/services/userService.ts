@@ -1,13 +1,30 @@
-import { BaseCRUDService } from './crud.ts'
-import { User } from '../models/index.ts'
-import type { InferAttributes, InferCreationAttributes } from 'sequelize'
+import type { User } from '../models/user.ts'
+import type { Repository } from '../db/repository.ts'
 
-export class UserService extends BaseCRUDService<
-  User,
-  InferAttributes<User>,
-  InferCreationAttributes<User, {omit: 'id'}>
-> {
-  constructor() {
-    super(User)
+export class UserService {
+  constructor(private repository: Repository<User>) {}
+
+  findById(id: string | number) {
+    return this.repository.findById(id)
+  }
+
+  save(user: Partial<User>) {
+    return this.repository.save(user)
+  }
+
+  delete(id: string | number) {
+    return this.repository.delete(id)
+  }
+
+  update(id: string | number, user: Partial<User>) {
+    return this.repository.update(id, user)
+  }
+
+  count() {
+    return this.repository.count()
+  }
+
+  findAll(limit: number, offset: number): Promise<User[]> {
+    return this.repository.findAll(limit, offset)
   }
 }

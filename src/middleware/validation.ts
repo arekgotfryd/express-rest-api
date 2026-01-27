@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
 import { ZodError, type ZodSchema } from 'zod'
+import logger from '../utils/logger.ts'
 
 export const validateBody = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -7,6 +8,7 @@ export const validateBody = (schema: ZodSchema) => {
       schema.parse(req.body)
       next()
     } catch (error) {
+      logger.error('Validation error:', error)
       if (error instanceof ZodError) {
         return res.status(400).json({
           error: 'Validation failed',

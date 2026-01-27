@@ -5,3 +5,9 @@ export const orderSchema = z.object({
   userId: z.uuid({ version: 'v4' }).optional(),
   organizationId: z.uuid({ version: 'v4' }).optional(),
 })
+
+export const orderUpdateSchema = z.strictObject({
+  totalAmount: z.number().positive(),
+})
+
+

@@ -1,13 +1,30 @@
-import { BaseCRUDService } from './crud.ts'
-import { Order } from '../models/index.ts'
-import type { InferAttributes, InferCreationAttributes } from 'sequelize'
+import type { Order } from '../models/order.ts'
+import type { Repository } from '../db/repository.ts'
 
-export class OrderService extends BaseCRUDService<
-  Order,
-  InferAttributes<Order>,
-  InferCreationAttributes<Order, { omit: 'id' }>
-> {
-  constructor() {
-    super(Order)
+export class OrderService {
+  constructor(private repository: Repository<Order>) {}
+
+  findById(id: string | number) {
+    return this.repository.findById(id)
+  }
+
+  save(order: Partial<Order>) {
+    return this.repository.save(order)
+  }
+
+  delete(id: string | number) {
+    return this.repository.delete(id)
+  }
+
+  update(id: string | number, order: Partial<Order>) {
+    return this.repository.update(id, order)
+  }
+
+  count() {
+    return this.repository.count()
+  }
+
+  findAll(limit: number, offset: number): Promise<Order[]> {
+    return this.repository.findAll(limit, offset)
   }
 }
