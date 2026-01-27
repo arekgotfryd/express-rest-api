@@ -1,14 +1,24 @@
 import type { Request, Response } from 'express'
-import { generateToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.ts'
+import {
+  generateToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+  generateTokenFamily,
+} from '../utils/jwt.ts'
 import { User, Organization } from '../models/index.ts'
 import { logger } from '../utils/logger.ts'
 import { toUserDTO } from '../dtos/mappers.ts'
 import { hashPassword, comparePassword } from '../utils/password.ts'
-import type { AuthResponseDTO, RefreshTokenResponseDTO, ErrorDTO } from '../dtos/index.ts'
+import type {
+  AuthResponseDTO,
+  RefreshTokenResponseDTO,
+  ErrorDTO,
+} from '../dtos/index.ts'
+import { RefreshToken } from '../models/refreshToken.ts'
 
 export const register = async (
   req: Request,
-  res: Response<AuthResponseDTO | ErrorDTO>
+  res: Response<AuthResponseDTO | ErrorDTO>,
 ) => {
   try {
     const { email, password, firstName, lastName, organizationName } = req.body
@@ -39,11 +49,21 @@ export const register = async (
       organizationId: organization.id,
     })
 
-    // Generate refresh token
-    const refreshToken = await generateRefreshToken({
+    // Generate refresh token with token family
+    const tokenFamily = generateTokenFamily()
+    const { token: refreshToken, tokenId } = await generateRefreshToken({
       id: created.id,
       email: created.email,
       organizationId: organization.id,
+      tokenFamily,
+    })
+
+    await RefreshToken.create({
+      id: tokenId,
+      token: await hashPassword(refreshToken),
+      tokenFamily,
+      userId: created.id,
+      revoked: false,
     })
 
     res.status(201).json({
@@ -53,6 +73,7 @@ export const register = async (
       refreshToken,
     })
   } catch (error) {
+    console.error(error)
     logger.error('Registration error:', error)
     res.status(500).json({ error: 'Failed to create user' })
   }
@@ -60,7 +81,7 @@ export const register = async (
 
 export const login = async (
   req: Request,
-  res: Response<AuthResponseDTO | ErrorDTO>
+  res: Response<AuthResponseDTO | ErrorDTO>,
 ) => {
   try {
     const { email, password } = req.body
@@ -86,11 +107,21 @@ export const login = async (
       organizationId: user.organizationId,
     })
 
-    // Generate refresh token
-    const refreshToken = await generateRefreshToken({
+    // Generate refresh token with token family
+    const tokenFamily = generateTokenFamily()
+    const { token: refreshToken, tokenId } = await generateRefreshToken({
       id: user.id,
       email: user.email,
       organizationId: user.organizationId,
+      tokenFamily,
+    })
+
+    await RefreshToken.create({
+      id: tokenId,
+      token: await hashPassword(refreshToken),
+      tokenFamily,
+      userId: user.id,
+      revoked: false,
     })
 
     res.json({
@@ -107,7 +138,90 @@ export const login = async (
 
 export const refreshToken = async (
   req: Request,
-  res: Response<RefreshTokenResponseDTO | ErrorDTO>
+  res: Response<RefreshTokenResponseDTO | ErrorDTO>,
+) => {
+  try {
+    const { refreshToken: token } = req.body
+
+    if (!token) {
+      return res.status(400).json({ error: 'Refresh token is required' })
+    }
+
+    // Verify the refresh token signature and expiration
+    const payload = await verifyRefreshToken(token)
+
+    // Verify user still exists
+    const user = await User.findByPk(payload.id)
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' })
+    }
+
+    // Look up the token by id (from JWT payload)
+    const storedToken = await RefreshToken.findByPk(payload.tokenId)
+
+    if (!storedToken) {
+      return res.status(401).json({ error: 'Invalid refresh token' })
+    }
+
+    // Check if token has been revoked (potential token reuse attack)
+    if (storedToken.revoked) {
+      // Revoke all tokens in this family - potential theft detected
+      await RefreshToken.update(
+        { revoked: true },
+        { where: { tokenFamily: storedToken.tokenFamily } },
+      )
+      logger.warn(`Refresh token reuse detected for user ${user.id}, family ${storedToken.tokenFamily}`)
+      return res.status(401).json({ error: 'Session expired. Please log in again.' })
+    }
+
+    // Verify the token hash matches
+    const valid = await comparePassword(token, storedToken.token)
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid refresh token' })
+    }
+
+    // Revoke the current token (rotation)
+    await RefreshToken.update(
+      { revoked: true },
+      { where: { id: storedToken.id } },
+    )
+
+    // Generate new access token
+    const newAccessToken = await generateToken({
+      id: user.id,
+      email: user.email,
+      organizationId: user.organizationId,
+    })
+
+    // Generate new refresh token in the same family
+    const { token: newRefreshToken, tokenId: newTokenId } = await generateRefreshToken({
+      id: user.id,
+      email: user.email,
+      organizationId: user.organizationId,
+      tokenFamily: storedToken.tokenFamily,
+    })
+
+    await RefreshToken.create({
+      id: newTokenId,
+      token: await hashPassword(newRefreshToken),
+      tokenFamily: storedToken.tokenFamily,
+      userId: user.id,
+      revoked: false,
+    })
+
+    res.json({
+      token: newAccessToken,
+      refreshToken: newRefreshToken,
+    })
+  } catch (error) {
+    logger.error('Refresh token error:', error)
+    res.status(401).json({ error: 'Invalid or expired refresh token' })
+  }
+}
+
+export const logout = async (
+  req: Request,
+  res: Response<{ message: string } | ErrorDTO>,
 ) => {
   try {
     const { refreshToken: token } = req.body
@@ -119,31 +233,24 @@ export const refreshToken = async (
     // Verify the refresh token
     const payload = await verifyRefreshToken(token)
 
-    // Verify user still exists
-    const user = await User.findByPk(payload.id)
-    if (!user) {
-      return res.status(401).json({ error: 'User not found' })
+    // Find the token in DB
+    const storedToken = await RefreshToken.findByPk(payload.tokenId)
+
+    if (!storedToken) {
+      // Token not found - might already be revoked, still return success
+      return res.json({ message: 'Logged out successfully' })
     }
 
-    // Generate new tokens
-    const newToken = await generateToken({
-      id: user.id,
-      email: user.email,
-      organizationId: user.organizationId,
-    })
+    // Revoke all tokens in this family (logout from this session chain)
+    await RefreshToken.update(
+      { revoked: true },
+      { where: { tokenFamily: storedToken.tokenFamily } },
+    )
 
-    const newRefreshToken = await generateRefreshToken({
-      id: user.id,
-      email: user.email,
-      organizationId: user.organizationId,
-    })
-
-    res.json({
-      token: newToken,
-      refreshToken: newRefreshToken,
-    })
+    res.json({ message: 'Logged out successfully' })
   } catch (error) {
-    logger.error('Refresh token error:', error)
-    res.status(401).json({ error: 'Invalid or expired refresh token' })
+    logger.error('Logout error:', error)
+    // Return success even if token is invalid/expired - user wanted to logout anyway
+    res.json({ message: 'Logged out successfully' })
   }
 }

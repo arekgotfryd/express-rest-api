@@ -3,14 +3,17 @@ import {
   register,
   login,
   refreshToken,
+  logout,
 } from '../../../src/controllers/authController.ts'
 import { User, Organization } from '../../../src/models/index.ts'
 import {
   generateToken,
   generateRefreshToken,
+  generateTokenFamily,
   verifyRefreshToken,
 } from '../../../src/utils/jwt.ts'
 import { hashPassword, comparePassword } from '../../../src/utils/password.ts'
+import { RefreshToken } from '../../../src/models/refreshToken.ts'
 
 vi.mock('../../../src/models/index.ts', () => ({
   User: {
@@ -22,11 +25,19 @@ vi.mock('../../../src/models/index.ts', () => ({
     findOne: vi.fn(),
   },
 }))
+vi.mock('../../../src/models/refreshToken.ts', () => ({
+  RefreshToken: {
+    create: vi.fn(),
+    findByPk: vi.fn(),
+    update: vi.fn(),
+  },
+}))
 
 vi.mock('../../../src/utils/jwt.ts', () => ({
   generateToken: vi.fn(),
   generateRefreshToken: vi.fn(),
   verifyRefreshToken: vi.fn(),
+  generateTokenFamily: vi.fn(),
 }))
 
 vi.mock('../../../src/utils/password.ts', () => ({
@@ -76,13 +87,13 @@ describe('AuthController', () => {
         firstName: userData.firstName,
         lastName: userData.lastName,
       }
-
+      vi.mocked(RefreshToken.create).mockResolvedValue({} as any)
       vi.mocked(Organization.findOne).mockResolvedValue(mockOrg as any)
       vi.mocked(hashPassword).mockResolvedValue('hashedpassword')
       vi.mocked(User.create).mockResolvedValue(mockUser as any)
       vi.mocked(generateToken).mockResolvedValue('token123')
-      vi.mocked(generateRefreshToken).mockResolvedValue('refreshtoken123')
-
+      vi.mocked(generateRefreshToken).mockResolvedValue({ token: 'refreshtoken123', tokenId: 'token-id-123' })
+      vi.mocked(generateTokenFamily).mockReturnValue('tokenfamily123')
       await register(mockRequest, mockResponse)
 
       expect(Organization.findOne).toHaveBeenCalledWith({
@@ -133,7 +144,7 @@ describe('AuthController', () => {
       }
 
       vi.mocked(Organization.findOne).mockRejectedValue(
-        new Error('Database error')
+        new Error('Database error'),
       )
 
       await register(mockRequest, mockResponse)
@@ -165,7 +176,8 @@ describe('AuthController', () => {
       vi.mocked(User.findOne).mockResolvedValue(mockUser as any)
       vi.mocked(comparePassword).mockResolvedValue(true)
       vi.mocked(generateToken).mockResolvedValue('token123')
-      vi.mocked(generateRefreshToken).mockResolvedValue('refreshtoken123')
+      vi.mocked(generateRefreshToken).mockResolvedValue({ token: 'refreshtoken123', tokenId: 'token-id-123' })
+      vi.mocked(generateTokenFamily).mockReturnValue('tokenfamily123')
 
       await login(mockRequest, mockResponse)
 
@@ -174,7 +186,7 @@ describe('AuthController', () => {
       })
       expect(comparePassword).toHaveBeenCalledWith(
         credentials.password,
-        mockUser.password
+        mockUser.password,
       )
       expect(mockResponse.json).toHaveBeenCalledWith({
         message: 'Login successful',
@@ -259,7 +271,7 @@ describe('AuthController', () => {
       mockRequest.body = { refreshToken: 'invalid-token' }
 
       vi.mocked(verifyRefreshToken).mockRejectedValue(
-        new Error('Invalid token')
+        new Error('Invalid token'),
       )
 
       await refreshToken(mockRequest, mockResponse)
@@ -277,6 +289,8 @@ describe('AuthController', () => {
         id: 'user-123',
         email: 'test@example.com',
         organizationId: 'org-123',
+        tokenId: 'token-id-123',
+        tokenFamily: 'token-family-123',
       })
       vi.mocked(User.findByPk).mockResolvedValue(null)
 
@@ -301,15 +315,28 @@ describe('AuthController', () => {
         id: 'user-123',
         email: 'test@example.com',
         organizationId: 'org-123',
+        tokenId: 'token-id-123',
+        tokenFamily: 'token-family-123',
       })
       vi.mocked(User.findByPk).mockResolvedValue(mockUser as any)
       vi.mocked(generateToken).mockResolvedValue('new-access-token')
-      vi.mocked(generateRefreshToken).mockResolvedValue('new-refresh-token')
+      vi.mocked(generateRefreshToken).mockResolvedValue({ token: 'new-refresh-token', tokenId: 'new-token-id-456' })
+      vi.mocked(hashPassword).mockResolvedValue('hashed-new-refresh-token')
+      vi.mocked(comparePassword).mockResolvedValue(true)
+      vi.mocked(RefreshToken.create).mockResolvedValue({} as any)
+      vi.mocked(RefreshToken.update).mockResolvedValue({} as any)
+      vi.mocked(RefreshToken.findByPk).mockResolvedValue({
+        id: 'token-id-123',
+        token: 'hashed-token',
+        tokenFamily: 'token-family-123',
+        revoked: false,
+      } as any)
 
       await refreshToken(mockRequest, mockResponse)
 
       expect(verifyRefreshToken).toHaveBeenCalledWith('valid-refresh-token')
       expect(User.findByPk).toHaveBeenCalledWith('user-123')
+      expect(RefreshToken.findByPk).toHaveBeenCalledWith('token-id-123')
       expect(generateToken).toHaveBeenCalledWith({
         id: 'user-123',
         email: 'test@example.com',
@@ -319,10 +346,86 @@ describe('AuthController', () => {
         id: 'user-123',
         email: 'test@example.com',
         organizationId: 'org-123',
+        tokenFamily: 'token-family-123',
       })
       expect(mockResponse.json).toHaveBeenCalledWith({
         token: 'new-access-token',
         refreshToken: 'new-refresh-token',
+      })
+    })
+  })
+
+  describe('logout', () => {
+    it('should return 400 when refresh token is missing', async () => {
+      mockRequest.body = {}
+
+      await logout(mockRequest, mockResponse)
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400)
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Refresh token is required',
+      })
+    })
+
+    it('should logout successfully and revoke token family', async () => {
+      mockRequest.body = { refreshToken: 'valid-refresh-token' }
+
+      vi.mocked(verifyRefreshToken).mockResolvedValue({
+        id: 'user-123',
+        email: 'test@example.com',
+        organizationId: 'org-123',
+        tokenId: 'token-id-123',
+        tokenFamily: 'token-family-123',
+      })
+      vi.mocked(RefreshToken.findByPk).mockResolvedValue({
+        id: 'token-id-123',
+        token: 'hashed-token',
+        tokenFamily: 'token-family-123',
+        revoked: false,
+      } as any)
+      vi.mocked(RefreshToken.update).mockResolvedValue({} as any)
+
+      await logout(mockRequest, mockResponse)
+
+      expect(verifyRefreshToken).toHaveBeenCalledWith('valid-refresh-token')
+      expect(RefreshToken.findByPk).toHaveBeenCalledWith('token-id-123')
+      expect(RefreshToken.update).toHaveBeenCalledWith(
+        { revoked: true },
+        { where: { tokenFamily: 'token-family-123' } },
+      )
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Logged out successfully',
+      })
+    })
+
+    it('should return success even if token not found in DB', async () => {
+      mockRequest.body = { refreshToken: 'valid-refresh-token' }
+
+      vi.mocked(verifyRefreshToken).mockResolvedValue({
+        id: 'user-123',
+        email: 'test@example.com',
+        organizationId: 'org-123',
+        tokenId: 'token-id-123',
+        tokenFamily: 'token-family-123',
+      })
+      vi.mocked(RefreshToken.findByPk).mockResolvedValue(null)
+
+      await logout(mockRequest, mockResponse)
+
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Logged out successfully',
+      })
+    })
+
+    it('should return success even if token is invalid', async () => {
+      mockRequest.body = { refreshToken: 'invalid-token' }
+
+      vi.mocked(verifyRefreshToken).mockRejectedValue(new Error('Invalid token'))
+
+      await logout(mockRequest, mockResponse)
+
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Logged out successfully',
       })
     })
   })

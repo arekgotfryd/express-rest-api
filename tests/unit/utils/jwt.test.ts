@@ -118,11 +118,12 @@ describe('JWT Utils', () => {
   })
 
   describe('generateRefreshToken', () => {
-    it('should generate a refresh token with user payload', async () => {
-      const payload = {
+    it('should generate a refresh token with user payload, tokenId, and tokenFamily', async () => {
+      const params = {
         id: 'user-123',
         email: 'test@example.com',
         organizationId: 'org-123',
+        tokenFamily: 'family-123',
       }
 
       const mockToken = 'generated.refresh.token'
@@ -135,14 +136,25 @@ describe('JWT Utils', () => {
 
       vi.mocked(SignJWT).mockReturnValue(mockSignJWTInstance as any)
 
-      const result = await generateRefreshToken(payload)
+      const result = await generateRefreshToken(params)
 
-      expect(SignJWT).toHaveBeenCalledWith(payload)
+      expect(SignJWT).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'user-123',
+          email: 'test@example.com',
+          organizationId: 'org-123',
+          tokenFamily: 'family-123',
+          tokenId: expect.any(String),
+        })
+      )
       expect(mockSignJWTInstance.setProtectedHeader).toHaveBeenCalledWith({ alg: 'HS256' })
       expect(mockSignJWTInstance.setIssuedAt).toHaveBeenCalled()
       expect(mockSignJWTInstance.setExpirationTime).toHaveBeenCalledWith(expect.any(String))
       expect(mockSignJWTInstance.sign).toHaveBeenCalled()
-      expect(result).toBe(mockToken)
+      expect(result).toEqual({
+        token: mockToken,
+        tokenId: expect.any(String),
+      })
     })
 
     // Skipped: env validation at startup prevents this scenario
@@ -150,13 +162,14 @@ describe('JWT Utils', () => {
       const originalSecret = env.REFRESH_TOKEN_SECRET
       delete env.REFRESH_TOKEN_SECRET
 
-      const payload = {
+      const params = {
         id: 'user-123',
         email: 'test@example.com',
         organizationId: 'org-123',
+        tokenFamily: 'family-123',
       }
 
-      await expect(generateRefreshToken(payload)).rejects.toThrow(
+      await expect(generateRefreshToken(params)).rejects.toThrow(
         'REFRESH_TOKEN_SECRET environment variable is not set'
       )
 
@@ -171,6 +184,8 @@ describe('JWT Utils', () => {
         id: 'user-123',
         email: 'test@example.com',
         organizationId: 'org-123',
+        tokenId: 'token-id-123',
+        tokenFamily: 'family-123',
       }
 
       vi.mocked(jwtVerify).mockResolvedValue({
