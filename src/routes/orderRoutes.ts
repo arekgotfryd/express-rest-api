@@ -169,12 +169,7 @@ router.post(
  *       500:
  *         description: Server error
  */
-router.put(
-  '/:id',
-  validateBody(orderUpdateSchema),
-  invalidateCacheMiddleware('orders'),
-  updateOrder,
-)
+router.put('/:id', validateBody(orderUpdateSchema), invalidateCacheMiddleware('orders'), updateOrder)
 
 /**
  * @swagger
