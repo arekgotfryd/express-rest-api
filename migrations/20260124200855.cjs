@@ -6,7 +6,6 @@ module.exports = {
     await queryInterface.createTable('refresh_tokens', {
       id: {
         type: Sequelize.UUID,
-        defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
         allowNull: false,
       },
@@ -18,10 +17,23 @@ module.exports = {
       userId: {
         type: Sequelize.UUID,
         allowNull: false,
+        field: 'user_id',
       },
       tokenFamily: {
         type: Sequelize.STRING(255),
         allowNull: false,
+        field: 'token_family',
+      },
+      revoked: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      dateCreated: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        field: 'date_created',
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
     })
   },

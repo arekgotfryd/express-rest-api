@@ -3,7 +3,6 @@ import {
   Model,
   type InferAttributes,
   type InferCreationAttributes,
-  type CreationOptional,
 } from 'sequelize'
 import { sequelize } from '../db/connection.ts'
 
@@ -11,7 +10,7 @@ export class RefreshToken extends Model<
   InferAttributes<RefreshToken>,
   InferCreationAttributes<RefreshToken>
 > {
-  declare id: CreationOptional<string>
+  declare id: string
   declare token: string
   declare userId: string
   declare tokenFamily: string
@@ -22,8 +21,8 @@ RefreshToken.init(
   {
     id: {
       type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
+      allowNull: false,
     },
     token: {
       type: DataTypes.STRING(255),
@@ -33,6 +32,7 @@ RefreshToken.init(
     userId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'user_id',
     },
     tokenFamily: {
       type: DataTypes.STRING(255),
