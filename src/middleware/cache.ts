@@ -1,7 +1,6 @@
 import { LRUCache } from 'lru-cache'
 import type { Request, Response, NextFunction, RequestHandler } from 'express'
 import crypto from 'crypto'
-import type { AuthenticatedRequest } from './auth.ts'
 
 /**
  * Cache invalidation patterns
@@ -25,7 +24,6 @@ interface CachedResponse {
   headers: Record<string, string>
   timestamp: number
   entityType: EntityType | null
-  organizationId: string
   etag: string
 }
 
@@ -42,22 +40,38 @@ const extractEntityType = (url: string): EntityType | null => {
 }
 
 /**
+ * Get Cache-Control header value based on entity type
+ * - Users/Organizations: cacheable for 10 minutes (private, max-age=600)
+ * - Orders: must revalidate with ETag (no-cache)
+ */
+const getCacheControlHeader = (entityType: EntityType | null): string => {
+  if (entityType === 'users' || entityType === 'organizations') {
+    return 'private, max-age=600'
+  }
+  // Orders use ETag validation only
+  return 'no-cache'
+}
+
+/**
  * Generate a unique cache key from the request
- * Includes: method, URL, query params, and user organization
+ * Includes: method and URL (with query params)
  */
 const generateCacheKey = (req: Request): string => {
-  const authReq = req as AuthenticatedRequest
-  const organizationId = authReq.user?.organizationId || 'anonymous'
-  const keyData = `${req.method}:${req.originalUrl}:${organizationId}`
+  const keyData = `${req.method}:${req.originalUrl}`
   return crypto.createHash('md5').update(keyData).digest('hex')
 }
 
 /**
- * Server-side caching middleware using LRU cache
- * Caches GET responses for 10 minutes
- * Automatically includes cache metadata in response headers
+ * HTTP caching middleware combining server-side LRU cache with client-side caching
+ * - Caches GET responses in memory (LRU) for 10 minutes
+ * - Generates ETag headers for client-side cache validation
+ * - Returns 304 Not Modified when client's If-None-Match matches current ETag
+ * - Sets Cache-Control headers:
+ *   - Users/Organizations: "private, max-age=600" (10 min client cache)
+ *   - Orders: "no-cache" (must revalidate with ETag)
+ * - Sets X-Cache header (HIT/MISS) to indicate server cache status
  */
-export const serverCache = (): RequestHandler => {
+export const httpCache = (): RequestHandler => {
   return (req: Request, res: Response, next: NextFunction) => {
     // Only cache GET requests
     if (req.method !== 'GET') {
@@ -73,6 +87,7 @@ export const serverCache = (): RequestHandler => {
       res.set('X-Cache-Key', cacheKey)
       res.set('X-Cache-Age', String(Math.floor((Date.now() - cachedResponse.timestamp) / 1000)))
       res.set('ETag', cachedResponse.etag)
+      res.set('Cache-Control', getCacheControlHeader(cachedResponse.entityType))
 
       // Check If-None-Match before returning full response
       const clientEtag = req.get('If-None-Match')
@@ -95,9 +110,9 @@ export const serverCache = (): RequestHandler => {
     res.json = (body: unknown): Response => {
       // Only cache successful responses (2xx status codes)
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        const authReq = req as AuthenticatedRequest
         const bodyString = JSON.stringify(body)
         const etag = `"${crypto.createHash('md5').update(bodyString).digest('hex')}"`
+        const entityType = extractEntityType(req.originalUrl)
 
         const responseToCache: CachedResponse = {
           body,
@@ -106,13 +121,13 @@ export const serverCache = (): RequestHandler => {
             'Content-Type': 'application/json',
           },
           timestamp: Date.now(),
-          entityType: extractEntityType(req.originalUrl),
-          organizationId: authReq.user?.organizationId || 'anonymous',
+          entityType,
           etag,
         }
         cache.set(cacheKey, responseToCache)
 
         res.set('ETag', etag)
+        res.set('Cache-Control', getCacheControlHeader(entityType))
 
         // Check If-None-Match for cache miss scenario
         const clientEtag = req.get('If-None-Match')
@@ -134,20 +149,15 @@ export const serverCache = (): RequestHandler => {
 }
 
 /**
- * Invalidate cache entries matching entity type and optionally organization
+ * Invalidate cache entries matching entity type
  * Call this after mutations (POST, PUT, DELETE)
  * @param entityType - The type of entity that was mutated (e.g., 'users', 'orders')
- * @param organizationId - Optional org ID to scope invalidation (if not provided, invalidates all orgs)
  */
-export const invalidateCache = (entityType: EntityType, organizationId?: string): void => {
+export const invalidateCache = (entityType: EntityType): void => {
   for (const [key, value] of cache.entries()) {
     // Check if this cache entry matches the entity type
     if (value.entityType === entityType) {
-      // If organizationId is provided, only invalidate for that org
-      // Otherwise, invalidate all entries of this entity type
-      if (!organizationId || value.organizationId === organizationId) {
-        cache.delete(key)
-      }
+      cache.delete(key)
     }
   }
 }
@@ -157,7 +167,7 @@ export const invalidateCache = (entityType: EntityType, organizationId?: string)
  * Apply to POST, PUT, DELETE routes
  */
 export const invalidateCacheMiddleware = (entityType: EntityType): RequestHandler => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (_req: Request, res: Response, next: NextFunction) => {
     // Store original json method
     const originalJson = res.json.bind(res)
 
@@ -165,8 +175,7 @@ export const invalidateCacheMiddleware = (entityType: EntityType): RequestHandle
     res.json = (body: unknown): Response => {
       // Invalidate cache on successful mutations
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        const authReq = req as AuthenticatedRequest
-        invalidateCache(entityType, authReq.user?.organizationId)
+        invalidateCache(entityType)
       }
 
       return originalJson(body)

@@ -1,17 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { Request, Response, NextFunction } from 'express'
 import {
-  serverCache,
+  httpCache,
   invalidateCache,
   invalidateCacheMiddleware,
   clearCache,
   getCacheStats,
   cache,
 } from '../../../src/middleware/cache.ts'
-import type { AuthenticatedRequest } from '../../../src/middleware/auth.ts'
 
-describe('Server Cache Middleware', () => {
-  let mockRequest: Partial<AuthenticatedRequest>
+describe('HTTP Cache Middleware', () => {
+  let mockRequest: Partial<Request>
   let mockResponse: Partial<Response>
   let mockNext: NextFunction
 
@@ -22,11 +21,6 @@ describe('Server Cache Middleware', () => {
     mockRequest = {
       method: 'GET',
       originalUrl: '/api/users',
-      user: {
-        id: 'user-123',
-        email: 'test@example.com',
-        organizationId: 'org-123',
-      },
       get: vi.fn().mockReturnValue(undefined),
     }
 
@@ -47,11 +41,11 @@ describe('Server Cache Middleware', () => {
     clearCache()
   })
 
-  describe('serverCache', () => {
+  describe('httpCache', () => {
     it('should skip caching for non-GET requests', () => {
       mockRequest.method = 'POST'
 
-      const middleware = serverCache()
+      const middleware = httpCache()
       middleware(
         mockRequest as Request,
         mockResponse as Response,
@@ -63,7 +57,7 @@ describe('Server Cache Middleware', () => {
     })
 
     it('should cache GET responses and set X-Cache: MISS on first request', () => {
-      const middleware = serverCache()
+      const middleware = httpCache()
       middleware(
         mockRequest as Request,
         mockResponse as Response,
@@ -82,7 +76,7 @@ describe('Server Cache Middleware', () => {
     })
 
     it('should return cached response with X-Cache: HIT on subsequent requests', () => {
-      const middleware = serverCache()
+      const middleware = httpCache()
       const responseBody = { users: [{ id: '1', name: 'Test' }] }
 
       // First request - cache miss
@@ -113,7 +107,7 @@ describe('Server Cache Middleware', () => {
     })
 
     it('should generate different cache keys for different URLs', () => {
-      const middleware = serverCache()
+      const middleware = httpCache()
 
       // First request to /api/users
       middleware(
@@ -137,10 +131,10 @@ describe('Server Cache Middleware', () => {
       expect(mockNext).toHaveBeenCalled()
     })
 
-    it('should generate different cache keys for different organizations', () => {
-      const middleware = serverCache()
+    it('should return cache HIT for same URL regardless of user', () => {
+      const middleware = httpCache()
 
-      // First request from org-123
+      // First request
       middleware(
         mockRequest as Request,
         mockResponse as Response,
@@ -148,8 +142,7 @@ describe('Server Cache Middleware', () => {
       )
       mockResponse.json!({ users: [] })
 
-      // Second request from org-456
-      mockRequest.user = { id: 'user-456', email: 'other@example.com', organizationId: 'org-456' }
+      // Second request (same URL)
       vi.clearAllMocks()
       mockResponse.json = vi.fn().mockReturnThis()
 
@@ -159,13 +152,13 @@ describe('Server Cache Middleware', () => {
         mockNext
       )
 
-      // Should be a cache miss (different org)
-      expect(mockNext).toHaveBeenCalled()
-      expect(mockResponse.set).not.toHaveBeenCalledWith('X-Cache', 'HIT')
+      // Should be a cache hit (same URL)
+      expect(mockNext).not.toHaveBeenCalled()
+      expect(mockResponse.set).toHaveBeenCalledWith('X-Cache', 'HIT')
     })
 
     it('should not cache non-2xx responses', () => {
-      const middleware = serverCache()
+      const middleware = httpCache()
       mockResponse.statusCode = 404
 
       middleware(
@@ -188,7 +181,6 @@ describe('Server Cache Middleware', () => {
         headers: {},
         timestamp: Date.now(),
         entityType: 'users',
-        organizationId: 'org-123',
         etag: '"abc123"',
       })
       cache.set('key2', {
@@ -197,7 +189,6 @@ describe('Server Cache Middleware', () => {
         headers: {},
         timestamp: Date.now(),
         entityType: 'orders',
-        organizationId: 'org-123',
         etag: '"def456"',
       })
 
@@ -211,35 +202,31 @@ describe('Server Cache Middleware', () => {
       expect(cache.has('key2')).toBe(true)
     })
 
-    it('should invalidate cache entries for specific organization only', () => {
-      // Add entries for different orgs
+    it('should invalidate all entries of an entity type', () => {
+      // Add multiple entries of same entity type
       cache.set('key1', {
         body: { users: [] },
         statusCode: 200,
         headers: {},
         timestamp: Date.now(),
         entityType: 'users',
-        organizationId: 'org-123',
         etag: '"abc123"',
       })
       cache.set('key2', {
-        body: { users: [] },
+        body: { users: [{ id: 1 }] },
         statusCode: 200,
         headers: {},
         timestamp: Date.now(),
         entityType: 'users',
-        organizationId: 'org-456',
         etag: '"def456"',
       })
 
       expect(cache.size).toBe(2)
 
-      // Invalidate users for org-123 only
-      invalidateCache('users', 'org-123')
+      // Invalidate all users entries
+      invalidateCache('users')
 
-      expect(cache.size).toBe(1)
-      expect(cache.has('key1')).toBe(false)
-      expect(cache.has('key2')).toBe(true)
+      expect(cache.size).toBe(0)
     })
 
     it('should not invalidate entries of different entity types', () => {
@@ -249,11 +236,10 @@ describe('Server Cache Middleware', () => {
         headers: {},
         timestamp: Date.now(),
         entityType: 'orders',
-        organizationId: 'org-123',
         etag: '"abc123"',
       })
 
-      invalidateCache('users', 'org-123')
+      invalidateCache('users')
 
       expect(cache.size).toBe(1)
       expect(cache.has('key1')).toBe(true)
@@ -269,7 +255,6 @@ describe('Server Cache Middleware', () => {
         headers: {},
         timestamp: Date.now(),
         entityType: 'users',
-        organizationId: 'org-123',
         etag: '"abc123"',
       })
 
@@ -302,7 +287,6 @@ describe('Server Cache Middleware', () => {
         headers: {},
         timestamp: Date.now(),
         entityType: 'users',
-        organizationId: 'org-123',
         etag: '"abc123"',
       })
 
@@ -331,7 +315,6 @@ describe('Server Cache Middleware', () => {
         headers: {},
         timestamp: Date.now(),
         entityType: 'users',
-        organizationId: 'org-123',
         etag: '"abc123"',
       })
 
@@ -351,7 +334,6 @@ describe('Server Cache Middleware', () => {
         headers: {},
         timestamp: Date.now(),
         entityType: 'users',
-        organizationId: 'org-123',
         etag: '"abc123"',
       })
       cache.set('key2', {
@@ -360,7 +342,6 @@ describe('Server Cache Middleware', () => {
         headers: {},
         timestamp: Date.now(),
         entityType: 'orders',
-        organizationId: 'org-123',
         etag: '"def456"',
       })
 

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { register, login, refreshToken } from '../controllers/authController.ts'
 import { validateBody } from '../middleware/validation.ts'
 import { loginSchema, registerUserSchema, refreshTokenSchema } from '../validation/auth.ts'
+import { invalidateCacheMiddleware } from '../middleware/cache.ts'
 
 const router = Router()
 
@@ -51,7 +52,7 @@ const router = Router()
  *       500:
  *         description: Server error
  */
-router.post('/register', validateBody(registerUserSchema), register)
+router.post('/register', validateBody(registerUserSchema), invalidateCacheMiddleware('users'), register)
 
 /**
  * @swagger

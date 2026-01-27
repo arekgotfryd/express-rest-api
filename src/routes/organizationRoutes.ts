@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { authenticateToken } from '../middleware/auth.ts'
-import { serverCache, invalidateCacheMiddleware } from '../middleware/cache.ts'
+import { httpCache, invalidateCacheMiddleware } from '../middleware/cache.ts'
 import { validateBody, validateQuery } from '../middleware/validation.ts'
 import {
   createOrganization,
@@ -62,7 +62,7 @@ router.use(organizationRateLimiter)
 router.get(
   '/',
   validateQuery(paginationSchema),
-  serverCache(),
+  httpCache(),
   getOrganizations,
 )
 
@@ -99,7 +99,7 @@ router.get(
  *       500:
  *         description: Server error
  */
-router.get('/:id', serverCache(), getOrganization)
+router.get('/:id', httpCache(), getOrganization)
 
 /**
  * @swagger

@@ -233,76 +233,81 @@ The E2E tests will run against the containerized application and database, testi
 
 ## Cache Flow
 
-The API implements a two-layer caching strategy combining server-side LRU cache with ETag validation:
+The API implements a multi-layer caching strategy:
+
+1. **Client-side cache** (Cache-Control) - Browser caches responses, no request made
+2. **Server-side LRU cache** - In-memory cache, no database query
+3. **ETag validation** - Returns 304 if content unchanged
 
 ```
-                    ┌─────────────────────┐
-                    │   GET Request       │
-                    │   If-None-Match: X  │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │  Check Server Cache │
-                    └──────────┬──────────┘
-                               │
-              ┌────────────────┴────────────────┐
-              │                                 │
-              ▼                                 ▼
-    ┌──────────────────┐              ┌──────────────────┐
-    │   CACHE HIT      │              │   CACHE MISS     │
-    │   (have entry)   │              │   (no entry)     │
-    └────────┬─────────┘              └────────┬─────────┘
-             │                                 │
-             ▼                                 ▼
-    ┌──────────────────┐              ┌──────────────────┐
-    │ ETag matches     │              │  Query Database  │
-    │ If-None-Match?   │              │  (controller)    │
-    └────────┬─────────┘              └────────┬─────────┘
-             │                                 │
-      ┌──────┴──────┐                          ▼
-      │             │                 ┌──────────────────┐
-      ▼             ▼                 │ Generate ETag    │
-    ┌─────┐      ┌─────┐              │ Store in cache   │
-    │ YES │      │ NO  │              └────────┬─────────┘
-    └──┬──┘      └──┬──┘                       │
-       │            │                          ▼
-       │            │                 ┌──────────────────┐
-       │            │                 │ ETag matches     │
-       │            │                 │ If-None-Match?   │
-       │            │                 └────────┬─────────┘
-       │            │                          │
-       │            │                   ┌──────┴──────┐
-       │            │                   │             │
-       │            │                   ▼             ▼
-       │            │                 ┌─────┐      ┌─────┐
-       │            │                 │ YES │      │ NO  │
-       │            │                 └──┬──┘      └──┬──┘
-       │            │                    │            │
-       ▼            ▼                    ▼            ▼
-┌────────────┐ ┌────────────┐    ┌────────────┐ ┌────────────┐
-│ X-Cache:   │ │ X-Cache:   │    │ X-Cache:   │ │ X-Cache:   │
-│ HIT        │ │ HIT        │    │ MISS       │ │ MISS       │
-│            │ │            │    │            │ │            │
-│ 304        │ │ 200 + body │    │ 304        │ │ 200 + body │
-│ (no body)  │ │ (cached)   │    │ (no body)  │ │ (fresh)    │
-└────────────┘ └────────────┘    └────────────┘ └────────────┘
-       │            │                    │            │
-       ▼            ▼                    ▼            ▼
-   No DB hit    No DB hit            DB hit       DB hit
-   No body      Body sent            No body      Body sent
+                        ┌─────────────────────┐
+                        │   GET /api/users    │
+                        └──────────┬──────────┘
+                                   │
+                                   ▼
+┌──────────────────────────────────────────────────────────────┐
+│  CLIENT (Browser)                                            │
+│                                                              │
+│      ┌─────────────────────────────┐                         │
+│      │ Cache-Control still valid?  │                         │
+│      │    (max-age not expired)    │                         │
+│      └──────────────┬──────────────┘                         │
+│              │             │                                 │
+│             YES            NO                                │
+│              │             │                                 │
+│              ▼             ▼                                 │
+│      ┌──────────────┐    ┌──────────────────────────┐        │
+│      │ Use cached   │    │ Send request to server   │        │
+│      │ response     │    │ + If-None-Match: <etag>  │        │
+│      │              │    └─────────────┬────────────┘        │
+│      │ (instant!)   │                  │                     │
+│      └──────────────┘                  │                     │
+│                                        │                     │
+└────────────────────────────────────────┼─────────────────────┘
+                                         │
+                                         ▼
+┌──────────────────────────────────────────────────────────────┐
+│  SERVER                                                      │
+│                                                              │
+│      ┌─────────────────────────────┐                         │
+│      │     Check LRU Cache         │                         │
+│      └──────────────┬──────────────┘                         │
+│              │             │                                 │
+│             HIT           MISS                               │
+│              │             │                                 │
+│              ▼             ▼                                 │
+│      ┌──────────────┐    ┌──────────────┐                    │
+│      │ ETag matches │    │  Query DB    │                    │
+│      │ request?     │    │  + cache it  │                    │
+│      └───────┬──────┘    └───────┬──────┘                    │
+│          │       │               │                           │
+│         YES      NO              ▼                           │
+│          │       │       ┌──────────────┐                    │
+│          │       │       │ ETag matches │                    │
+│          │       │       │ request?     │                    │
+│          │       │       └───────┬──────┘                    │
+│          │       │           │       │                       │
+│          │       │          YES      NO                      │
+│          ▼       ▼           ▼       ▼                       │
+│       ┌─────┐ ┌─────┐    ┌─────┐ ┌─────┐                     │
+│       │ 304 │ │ 200 │    │ 304 │ │ 200 │                     │
+│       │     │ │+body│    │     │ │+body│                     │
+│       └─────┘ └─────┘    └─────┘ └─────┘                     │
+│       X-Cache X-Cache    X-Cache X-Cache                     │
+│         HIT     HIT        MISS    MISS                      │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 **Response headers:**
-- `X-Cache: HIT` - Response served from server cache (no database query)
-- `X-Cache: MISS` - Database was queried
-- `ETag` - Hash of response body for client-side validation
-- `304 Not Modified` - Client's cached copy is still valid (no body sent)
+- `Cache-Control: private, max-age=600` - Users/Organizations (client caches 10 min)
+- `Cache-Control: no-cache` - Orders (must revalidate with ETag)
+- `ETag` - Hash of response body for validation
+- `X-Cache: HIT/MISS` - Server-side cache status
 
 **Cache invalidation:**
-- Cache entries are automatically invalidated when related data is modified (POST/PUT/DELETE)
+- Server cache entries invalidated on mutations (POST/PUT/DELETE)
 - TTL: 10 minutes
-- Scoped by organization to prevent data leakage between tenants
 
 
 

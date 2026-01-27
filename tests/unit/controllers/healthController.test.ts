@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Request, Response } from 'express'
 import { health, readiness } from '../../../src/controllers/healthController.ts'
 import { sequelize } from '../../../src/db/connection.ts'
-import * as serverCache from '../../../src/middleware/cache.ts'
+import * as httpCache from '../../../src/middleware/cache.ts'
 
 vi.mock('../../../src/db/connection.ts', () => ({
   sequelize: {
@@ -38,7 +38,7 @@ describe('Health Controller', () => {
     }
 
     // Default mock for cache stats
-    vi.mocked(serverCache.getCacheStats).mockReturnValue({
+    vi.mocked(httpCache.getCacheStats).mockReturnValue({
       size: 0,
       maxSize: 500,
       ttl: 600000,
@@ -87,7 +87,7 @@ describe('Health Controller', () => {
   describe('readiness', () => {
     it('should return ready status when all checks pass', async () => {
       vi.mocked(sequelize.authenticate).mockResolvedValue(undefined)
-      vi.mocked(serverCache.getCacheStats).mockReturnValue({
+      vi.mocked(httpCache.getCacheStats).mockReturnValue({
         size: 0,
         maxSize: 500,
         ttl: 600000,
@@ -109,7 +109,7 @@ describe('Health Controller', () => {
 
     it('should return not ready status when cache check fails', async () => {
       vi.mocked(sequelize.authenticate).mockResolvedValue(undefined)
-      vi.mocked(serverCache.getCacheStats).mockReturnValue({
+      vi.mocked(httpCache.getCacheStats).mockReturnValue({
         size: 0,
         maxSize: 0,
         ttl: 0,
