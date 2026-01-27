@@ -218,3 +218,39 @@ export const refreshToken = async (
     res.status(401).json({ error: 'Invalid or expired refresh token' })
   }
 }
+
+export const logout = async (
+  req: Request,
+  res: Response<{ message: string } | ErrorDTO>,
+) => {
+  try {
+    const { refreshToken: token } = req.body
+
+    if (!token) {
+      return res.status(400).json({ error: 'Refresh token is required' })
+    }
+
+    // Verify the refresh token
+    const payload = await verifyRefreshToken(token)
+
+    // Find the token in DB
+    const storedToken = await RefreshToken.findByPk(payload.tokenId)
+
+    if (!storedToken) {
+      // Token not found - might already be revoked, still return success
+      return res.json({ message: 'Logged out successfully' })
+    }
+
+    // Revoke all tokens in this family (logout from this session chain)
+    await RefreshToken.update(
+      { revoked: true },
+      { where: { tokenFamily: storedToken.tokenFamily } },
+    )
+
+    res.json({ message: 'Logged out successfully' })
+  } catch (error) {
+    logger.error('Logout error:', error)
+    // Return success even if token is invalid/expired - user wanted to logout anyway
+    res.json({ message: 'Logged out successfully' })
+  }
+}

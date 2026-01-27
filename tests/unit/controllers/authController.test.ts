@@ -3,6 +3,7 @@ import {
   register,
   login,
   refreshToken,
+  logout,
 } from '../../../src/controllers/authController.ts'
 import { User, Organization } from '../../../src/models/index.ts'
 import {
@@ -350,6 +351,81 @@ describe('AuthController', () => {
       expect(mockResponse.json).toHaveBeenCalledWith({
         token: 'new-access-token',
         refreshToken: 'new-refresh-token',
+      })
+    })
+  })
+
+  describe('logout', () => {
+    it('should return 400 when refresh token is missing', async () => {
+      mockRequest.body = {}
+
+      await logout(mockRequest, mockResponse)
+
+      expect(mockResponse.status).toHaveBeenCalledWith(400)
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Refresh token is required',
+      })
+    })
+
+    it('should logout successfully and revoke token family', async () => {
+      mockRequest.body = { refreshToken: 'valid-refresh-token' }
+
+      vi.mocked(verifyRefreshToken).mockResolvedValue({
+        id: 'user-123',
+        email: 'test@example.com',
+        organizationId: 'org-123',
+        tokenId: 'token-id-123',
+        tokenFamily: 'token-family-123',
+      })
+      vi.mocked(RefreshToken.findByPk).mockResolvedValue({
+        id: 'token-id-123',
+        token: 'hashed-token',
+        tokenFamily: 'token-family-123',
+        revoked: false,
+      } as any)
+      vi.mocked(RefreshToken.update).mockResolvedValue({} as any)
+
+      await logout(mockRequest, mockResponse)
+
+      expect(verifyRefreshToken).toHaveBeenCalledWith('valid-refresh-token')
+      expect(RefreshToken.findByPk).toHaveBeenCalledWith('token-id-123')
+      expect(RefreshToken.update).toHaveBeenCalledWith(
+        { revoked: true },
+        { where: { tokenFamily: 'token-family-123' } },
+      )
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Logged out successfully',
+      })
+    })
+
+    it('should return success even if token not found in DB', async () => {
+      mockRequest.body = { refreshToken: 'valid-refresh-token' }
+
+      vi.mocked(verifyRefreshToken).mockResolvedValue({
+        id: 'user-123',
+        email: 'test@example.com',
+        organizationId: 'org-123',
+        tokenId: 'token-id-123',
+        tokenFamily: 'token-family-123',
+      })
+      vi.mocked(RefreshToken.findByPk).mockResolvedValue(null)
+
+      await logout(mockRequest, mockResponse)
+
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Logged out successfully',
+      })
+    })
+
+    it('should return success even if token is invalid', async () => {
+      mockRequest.body = { refreshToken: 'invalid-token' }
+
+      vi.mocked(verifyRefreshToken).mockRejectedValue(new Error('Invalid token'))
+
+      await logout(mockRequest, mockResponse)
+
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Logged out successfully',
       })
     })
   })

@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { register, login, refreshToken } from '../controllers/authController.ts'
+import { register, login, refreshToken, logout } from '../controllers/authController.ts'
 import { validateBody } from '../middleware/validation.ts'
 import { loginSchema, registerUserSchema, refreshTokenSchema } from '../validation/auth.ts'
 import { invalidateCacheMiddleware } from '../middleware/cache.ts'
@@ -128,5 +128,37 @@ router.post('/login', validateBody(loginSchema), login)
  *         description: Invalid or expired refresh token
  */
 router.post('/refresh', validateBody(refreshTokenSchema), refreshToken)
+
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout user
+ *     description: Revokes the refresh token and all tokens in its family
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Logged out successfully
+ */
+router.post('/logout', validateBody(refreshTokenSchema), logout)
 
 export default router
