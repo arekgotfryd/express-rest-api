@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import { authenticateToken } from '../middleware/auth.ts'
-import { etag } from '../middleware/cache.ts'
-import { serverCache, invalidateCacheMiddleware } from '../middleware/serverCache.ts'
+import { httpCache, invalidateCacheMiddleware } from '../middleware/cache.ts'
 import { validateBody, validateQuery } from '../middleware/validation.ts'
 import {
   createOrder,
@@ -12,11 +11,13 @@ import {
 } from '../controllers/orderController.ts'
 import { orderSchema, orderUpdateSchema } from '../validation/order.ts'
 import { paginationSchema } from '../validation/pagination.ts'
+import { organizationRateLimiter } from '../middleware/rateLimit.ts'
 
 const router = Router()
 
 // Apply authentication to all routes
 router.use(authenticateToken)
+router.use(organizationRateLimiter)
 
 /**
  * @swagger
@@ -58,7 +59,7 @@ router.use(authenticateToken)
  *       500:
  *         description: Server error
  */
-router.get('/', validateQuery(paginationSchema), etag(), serverCache(), getOrders)
+router.get('/', validateQuery(paginationSchema), httpCache(), getOrders)
 
 /**
  * @swagger
@@ -93,7 +94,7 @@ router.get('/', validateQuery(paginationSchema), etag(), serverCache(), getOrder
  *       500:
  *         description: Server error
  */
-router.get('/:id', etag(), serverCache(), getOrder)
+router.get('/:id', httpCache(), getOrder)
 
 /**
  * @swagger
@@ -123,7 +124,12 @@ router.get('/:id', etag(), serverCache(), getOrder)
  *       500:
  *         description: Server error
  */
-router.post('/', validateBody(orderSchema), invalidateCacheMiddleware('orders'), createOrder)
+router.post(
+  '/',
+  validateBody(orderSchema),
+  invalidateCacheMiddleware('orders'),
+  createOrder,
+)
 
 /**
  * @swagger

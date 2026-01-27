@@ -231,5 +231,83 @@ The E2E tests will run against the containerized application and database, testi
 *   **Testing**: Utilized **Vitest** for a fast, modern testing experience.
 *   **Docker**: Configured a multi-environment Docker setup (`docker-compose.yml` vs `docker-compose.local.yml`) to support both production-like execution and local development with hot-reloading.
 
+## Cache Flow
+
+The API implements a multi-layer caching strategy:
+
+1. **Client-side cache** (Cache-Control) - Browser caches responses, no request made
+2. **Server-side LRU cache** - In-memory cache, no database query
+3. **ETag validation** - Returns 304 if content unchanged
+
+```
+                        ┌─────────────────────┐
+                        │   GET /api/users    │
+                        └──────────┬──────────┘
+                                   │
+                                   ▼
+┌──────────────────────────────────────────────────────────────┐
+│  CLIENT (Browser)                                            │
+│                                                              │
+│      ┌─────────────────────────────┐                         │
+│      │ Cache-Control still valid?  │                         │
+│      │    (max-age not expired)    │                         │
+│      └──────────────┬──────────────┘                         │
+│              │             │                                 │
+│             YES            NO                                │
+│              │             │                                 │
+│              ▼             ▼                                 │
+│      ┌──────────────┐    ┌──────────────────────────┐        │
+│      │ Use cached   │    │ Send request to server   │        │
+│      │ response     │    │ + If-None-Match: <etag>  │        │
+│      │              │    └─────────────┬────────────┘        │
+│      │ (instant!)   │                  │                     │
+│      └──────────────┘                  │                     │
+│                                        │                     │
+└────────────────────────────────────────┼─────────────────────┘
+                                         │
+                                         ▼
+┌──────────────────────────────────────────────────────────────┐
+│  SERVER                                                      │
+│                                                              │
+│      ┌─────────────────────────────┐                         │
+│      │     Check LRU Cache         │                         │
+│      └──────────────┬──────────────┘                         │
+│              │             │                                 │
+│             HIT           MISS                               │
+│              │             │                                 │
+│              ▼             ▼                                 │
+│      ┌──────────────┐    ┌──────────────┐                    │
+│      │ ETag matches │    │  Query DB    │                    │
+│      │ request?     │    │  + cache it  │                    │
+│      └───────┬──────┘    └───────┬──────┘                    │
+│          │       │               │                           │
+│         YES      NO              ▼                           │
+│          │       │       ┌──────────────┐                    │
+│          │       │       │ ETag matches │                    │
+│          │       │       │ request?     │                    │
+│          │       │       └───────┬──────┘                    │
+│          │       │           │       │                       │
+│          │       │          YES      NO                      │
+│          ▼       ▼           ▼       ▼                       │
+│       ┌─────┐ ┌─────┐    ┌─────┐ ┌─────┐                     │
+│       │ 304 │ │ 200 │    │ 304 │ │ 200 │                     │
+│       │     │ │+body│    │     │ │+body│                     │
+│       └─────┘ └─────┘    └─────┘ └─────┘                     │
+│       X-Cache X-Cache    X-Cache X-Cache                     │
+│         HIT     HIT        MISS    MISS                      │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Response headers:**
+- `Cache-Control: private, max-age=600` - Users/Organizations (client caches 10 min)
+- `Cache-Control: no-cache` - Orders (must revalidate with ETag)
+- `ETag` - Hash of response body for validation
+- `X-Cache: HIT/MISS` - Server-side cache status
+
+**Cache invalidation:**
+- Server cache entries invalidated on mutations (POST/PUT/DELETE)
+- TTL: 10 minutes
+
 
 

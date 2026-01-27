@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import { authenticateToken } from '../middleware/auth.ts'
-import { cacheControl } from '../middleware/cache.ts'
-import { serverCache, invalidateCacheMiddleware } from '../middleware/serverCache.ts'
+import { httpCache, invalidateCacheMiddleware } from '../middleware/cache.ts'
 import { validateBody, validateQuery } from '../middleware/validation.ts'
 import {
   createOrganization,
@@ -10,15 +9,15 @@ import {
   getOrganizations,
   updateOrganization,
 } from '../controllers/organizationController.ts'
-import {
-  organizationSchema,
-} from '../validation/organization.ts'
+import { organizationSchema } from '../validation/organization.ts'
 import { paginationSchema } from '../validation/pagination.ts'
+import { organizationRateLimiter } from '../middleware/rateLimit.ts'
 
 const router = Router()
 
 // Apply authentication to all routes
 router.use(authenticateToken)
+router.use(organizationRateLimiter)
 
 /**
  * @swagger
@@ -60,7 +59,12 @@ router.use(authenticateToken)
  *       500:
  *         description: Server error
  */
-router.get('/', validateQuery(paginationSchema), cacheControl(600), serverCache(), getOrganizations)
+router.get(
+  '/',
+  validateQuery(paginationSchema),
+  httpCache(),
+  getOrganizations,
+)
 
 /**
  * @swagger
@@ -95,7 +99,7 @@ router.get('/', validateQuery(paginationSchema), cacheControl(600), serverCache(
  *       500:
  *         description: Server error
  */
-router.get('/:id', cacheControl(600), serverCache(), getOrganization)
+router.get('/:id', httpCache(), getOrganization)
 
 /**
  * @swagger
@@ -134,7 +138,12 @@ router.get('/:id', cacheControl(600), serverCache(), getOrganization)
  *       500:
  *         description: Server error
  */
-router.post('/', validateBody(organizationSchema), invalidateCacheMiddleware('organizations'), createOrganization)
+router.post(
+  '/',
+  validateBody(organizationSchema),
+  invalidateCacheMiddleware('organizations'),
+  createOrganization,
+)
 
 /**
  * @swagger
@@ -176,7 +185,12 @@ router.post('/', validateBody(organizationSchema), invalidateCacheMiddleware('or
  *       500:
  *         description: Server error
  */
-router.put('/:id', validateBody(organizationSchema), invalidateCacheMiddleware('organizations'), updateOrganization)
+router.put(
+  '/:id',
+  validateBody(organizationSchema),
+  invalidateCacheMiddleware('organizations'),
+  updateOrganization,
+)
 
 /**
  * @swagger
@@ -204,6 +218,10 @@ router.put('/:id', validateBody(organizationSchema), invalidateCacheMiddleware('
  *       500:
  *         description: Server error
  */
-router.delete('/:id', invalidateCacheMiddleware('organizations'), deleteOrganization)
+router.delete(
+  '/:id',
+  invalidateCacheMiddleware('organizations'),
+  deleteOrganization,
+)
 
 export default router

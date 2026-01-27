@@ -6,16 +6,17 @@ import {
   deleteUser,
 } from '../controllers/userController.ts'
 import { authenticateToken } from '../middleware/auth.ts'
-import { cacheControl } from '../middleware/cache.ts'
-import { serverCache, invalidateCacheMiddleware } from '../middleware/serverCache.ts'
+import { httpCache, invalidateCacheMiddleware } from '../middleware/cache.ts'
 import { validateBody, validateQuery } from '../middleware/validation.ts'
 import { updateUserSchema } from '../validation/user.ts'
 import { paginationSchema } from '../validation/pagination.ts'
+import { organizationRateLimiter } from '../middleware/rateLimit.ts'
 
 const router = Router()
 
 // Apply authentication to all routes
 router.use(authenticateToken)
+router.use(organizationRateLimiter)
 
 /**
  * @swagger
@@ -57,7 +58,7 @@ router.use(authenticateToken)
  *       500:
  *         description: Server error
  */
-router.get('/', validateQuery(paginationSchema), cacheControl(600), serverCache(), getUsers)
+router.get('/', validateQuery(paginationSchema), httpCache(), getUsers)
 
 /**
  * @swagger
@@ -92,7 +93,7 @@ router.get('/', validateQuery(paginationSchema), cacheControl(600), serverCache(
  *       500:
  *         description: Server error
  */
-router.get('/:id', cacheControl(600), serverCache(), getUser)
+router.get('/:id', httpCache(), getUser)
 
 /**
  * @swagger
@@ -134,7 +135,12 @@ router.get('/:id', cacheControl(600), serverCache(), getUser)
  *       500:
  *         description: Server error
  */
-router.put('/:id', validateBody(updateUserSchema), invalidateCacheMiddleware('users'), updateUser)
+router.put(
+  '/:id',
+  validateBody(updateUserSchema),
+  invalidateCacheMiddleware('users'),
+  updateUser,
+)
 
 /**
  * @swagger
