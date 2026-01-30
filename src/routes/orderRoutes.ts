@@ -3,13 +3,14 @@ import { authenticateToken } from '../middleware/auth.ts'
 import { httpCache, invalidateCacheMiddleware } from '../middleware/cache.ts'
 import { validateBody, validateQuery } from '../middleware/validation.ts'
 import {
+  bulkOrder,
   createOrder,
   deleteOrder,
   getOrder,
   getOrders,
   updateOrder,
 } from '../controllers/orderController.ts'
-import { orderSchema, orderUpdateSchema } from '../validation/order.ts'
+import { orderSchema, bulkOrdersSchema, orderUpdateSchema } from '../validation/order.ts'
 import { paginationSchema } from '../validation/pagination.ts'
 import { organizationRateLimiter } from '../middleware/rateLimit.ts'
 
@@ -19,6 +20,62 @@ const router = Router()
 router.use(authenticateToken)
 router.use(organizationRateLimiter)
 
+/**
+ * @swagger
+ * /api/orders/bulk:
+ *   post:
+ *     summary: Create multiple orders in bulk
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - orders
+ *             properties:
+ *               orders:
+ *                 type: array
+ *                 minItems: 1
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - totalAmount
+ *                   properties:
+ *                     totalAmount:
+ *                       type: number
+ *                       description: Total order amount (must be positive)
+ *                     userId:
+ *                       type: string
+ *                       format: uuid
+ *                       description: User ID (optional, defaults to authenticated user)
+ *                     organizationId:
+ *                       type: string
+ *                       format: uuid
+ *                       description: Organization ID (optional, defaults to authenticated user's organization)
+ *     responses:
+ *       201:
+ *         description: Orders created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 orders:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Order'
+ *       400:
+ *         description: Validation failed (different organizationIds or total sum exceeds maximum)
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.post('/bulk', validateBody(bulkOrdersSchema), invalidateCacheMiddleware('orders'), bulkOrder)
 /**
  * @swagger
  * /api/orders:

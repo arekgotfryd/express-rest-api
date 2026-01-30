@@ -77,6 +77,9 @@ export interface OrdersResponseDTO {
   orders: OrderDTO[]
   pagination: PaginationDTO
 }
+export interface BulkOrdersResponseDTO {
+  orders: OrderDTO[]
+}
 
 // Single Item Response DTOs
 export interface UserResponseDTO {

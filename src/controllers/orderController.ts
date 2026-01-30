@@ -3,18 +3,24 @@ import type { AuthenticatedRequest } from '../middleware/auth.ts'
 import { container } from '../container.ts'
 import type { Order } from '../models/order.ts'
 import { logger } from '../utils/logger.ts'
-import { toOrderDTO, toOrderDTOList, toOrderWithRelationsDTO, toPaginationDTO } from '../dtos/mappers.ts'
+import {
+  toOrderDTO,
+  toOrderDTOList,
+  toOrderWithRelationsDTO,
+  toPaginationDTO,
+} from '../dtos/mappers.ts'
 import type {
   OrdersResponseDTO,
   OrderResponseDTO,
   OrderWithRelationsResponseDTO,
   MessageDTO,
   ErrorDTO,
+  BulkOrdersResponseDTO,
 } from '../dtos/index.ts'
 
 export const getOrders = async (
   req: AuthenticatedRequest,
-  res: Response<OrdersResponseDTO | ErrorDTO>
+  res: Response<OrdersResponseDTO | ErrorDTO>,
 ) => {
   try {
     // Pagination parameters
@@ -26,10 +32,7 @@ export const getOrders = async (
     const totalCount = await container.orderService.count()
 
     // Fetch paginated orders
-    const orders = await container.orderService.findAll(
-      limit,
-      offset,
-    )
+    const orders = await container.orderService.findAll(limit, offset)
 
     res.json({
       orders: toOrderDTOList(orders),
@@ -43,7 +46,7 @@ export const getOrders = async (
 
 export const getOrder = async (
   req: AuthenticatedRequest,
-  res: Response<OrderWithRelationsResponseDTO | ErrorDTO>
+  res: Response<OrderWithRelationsResponseDTO | ErrorDTO>,
 ) => {
   try {
     const orderId = req.params.id
@@ -63,7 +66,7 @@ export const getOrder = async (
 
 export const createOrder = async (
   req: AuthenticatedRequest,
-  res: Response<OrderResponseDTO | ErrorDTO>
+  res: Response<OrderResponseDTO | ErrorDTO>,
 ) => {
   try {
     const { totalAmount } = req.body
@@ -81,10 +84,33 @@ export const createOrder = async (
     res.status(500).json({ error: 'Failed to create order' })
   }
 }
+export const bulkOrder = async (
+  req: AuthenticatedRequest,
+  res: Response<BulkOrdersResponseDTO | ErrorDTO>,
+) => {
+  try {
+    const { orders } = req.body
+    const userId = req.user!.id
+    const organizationId = req.user!.organizationId
+
+    const ordersToCreate = orders.map((order: Partial<Order>) => ({
+      totalAmount: order.totalAmount,
+      userId: order.userId || userId,
+      organizationId: order.organizationId || organizationId,
+    }))
+
+    const createdOrders = await container.orderService.bulkSave(ordersToCreate)
+
+    res.status(201).json({ orders: toOrderDTOList(createdOrders) })
+  } catch (error) {
+    logger.error('Bulk order create error:', error)
+    res.status(500).json({ error: 'Failed to create bulk orders' })
+  }
+}
 
 export const updateOrder = async (
   req: AuthenticatedRequest,
-  res: Response<MessageDTO | ErrorDTO>
+  res: Response<MessageDTO | ErrorDTO>,
 ) => {
   try {
     const orderId = req.params.id
@@ -109,7 +135,7 @@ export const updateOrder = async (
 
 export const deleteOrder = async (
   req: AuthenticatedRequest,
-  res: Response<MessageDTO | ErrorDTO>
+  res: Response<MessageDTO | ErrorDTO>,
 ) => {
   try {
     const deletedCount = await container.orderService.delete(req.params.id)
@@ -124,4 +150,3 @@ export const deleteOrder = async (
     res.status(500).json({ error: 'Failed to delete an order' })
   }
 }
-

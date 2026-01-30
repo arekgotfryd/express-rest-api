@@ -174,4 +174,43 @@ describe('E2E API Tests', () => {
       expect(getRes.status).toBe(404)
     })
   })
+
+  describe('Bulk Orders API', () => {
+
+    it('should fail when orders have different organizationIds', async () => {
+      const bulkOrders = {
+        orders: [
+          { totalAmount: 100, userId, organizationId },
+          { totalAmount: 200, userId, organizationId: '00000000-0000-4000-8000-000000000001' },
+        ],
+      }
+
+      const res = await request(app)
+        .post('/api/orders/bulk')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(bulkOrders)
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Validation failed')
+      expect(res.body.details[0].message).toContain('All orders must have the same organizationId')
+    })
+
+    it('should fail when total sum exceeds maximum allowed value', async () => {
+      const bulkOrders = {
+        orders: [
+          { totalAmount: 60000, userId, organizationId },
+          { totalAmount: 50000, userId, organizationId },
+        ],
+      }
+
+      const res = await request(app)
+        .post('/api/orders/bulk')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(bulkOrders)
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Validation failed')
+      expect(res.body.details[0].message).toContain('Total sum of all orders must not exceed')
+    })
+  })
 })

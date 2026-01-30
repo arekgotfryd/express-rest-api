@@ -30,8 +30,34 @@ Each entity must support the following endpoints:
 | PUT | `/api/[entity]/{id}` | Updates an existing item |
 | DELETE | `/api/[entity]/{id}` | Deletes an item |
 
-#### Special endpoint
+#### Special endpoints
 - `GET /api/orders/{id}` — returns the order **along with** the associated user and organization.
+- `POST /api/orders/bulk` — creates multiple orders in a single request.
+
+##### Bulk Orders Endpoint
+
+Creates multiple orders at once with validation:
+
+| Rule | Description |
+|------|-------------|
+| `orders` array | Must contain at least 1 order |
+| `organizationId` | All orders must have the same organizationId |
+| Total sum | Sum of all `totalAmount` values must not exceed `MAX_BULK_ORDER_TOTAL` (default: 100,000) |
+
+**Request body:**
+```json
+{
+  "orders": [
+    { "totalAmount": 100, "userId": "uuid", "organizationId": "uuid" },
+    { "totalAmount": 200, "userId": "uuid", "organizationId": "uuid" }
+  ]
+}
+```
+
+> Note: `userId` and `organizationId` are optional. If omitted, they default to the authenticated user's values.
+
+**Environment variable:**
+- `MAX_BULK_ORDER_TOTAL` — Maximum allowed sum of all order amounts (default: 100,000)
 
 ---
 

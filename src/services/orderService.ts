@@ -12,6 +12,10 @@ export class OrderService {
     return this.repository.save(order)
   }
 
+  bulkSave(orders: Partial<Order>[]) {
+    return this.repository.bulkSave(orders)
+  }
+
   delete(id: string | number) {
     return this.repository.delete(id)
   }
