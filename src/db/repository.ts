@@ -6,6 +6,7 @@ import type { Model, ModelStatic, CreationAttributes } from 'sequelize'
 export interface Repository<T> {
   findById(id: string | number): Promise<T | null>
   save(entity: Partial<T>): Promise<T>
+  bulkSave(entities: Partial<T>[]): Promise<T[]>
   delete(id: string | number): Promise<number>
   update(id: string | number, entity: Partial<T>): Promise<number>
   findAll(limit: number, offset: number): Promise<T[]>
@@ -25,6 +26,10 @@ export class SequelizeRepository<T extends Model> implements Repository<T> {
 
   save(entity: Partial<T>): Promise<T> {
     return this.model.create(entity as CreationAttributes<T>)
+  }
+
+  bulkSave(entities: Partial<T>[]): Promise<T[]> {
+    return this.model.bulkCreate(entities as CreationAttributes<T>[])
   }
 
   delete(id: string | number): Promise<number> {
